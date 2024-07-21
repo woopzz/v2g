@@ -1,0 +1,20 @@
+{
+    "dockerFile": "./Dockerfile",
+    "containerUser": "admin",
+    "workspaceFolder": "/app",
+    "mounts": [
+        "source=${localWorkspaceFolder}/,target=/app,type=bind"
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "golang.go"
+            ],
+            "settings": {
+                "gopls": {
+                    "ui.semanticTokens": true
+                }
+            }
+        }
+    }
+}
