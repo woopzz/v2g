@@ -1,0 +1,19 @@
+{
+    "configurations": [
+        {
+            "name": "Python Debugger: FastAPI",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "cwd": "${workspaceFolder}/v2g",
+            "args": [
+                "main:app",
+                "--reload",
+                "--host",
+                "0.0.0.0"
+            ],
+            "console": "internalConsole"
+            // "jinja": true
+        }
+    ]
+}
