@@ -23,7 +23,10 @@ mongo_client = AsyncMongoClient(
 @app.post('/')
 async def convert_video(file: UploadFile):
     filename = file.filename
+
     content_type = calc_mimetype(file.content_type, filename)
+    if not content_type:
+        raise HTTPException(status_code=400, detail='Invalid media type. Expected video/*')
 
     metadata = {}
     if content_type:
@@ -75,12 +78,14 @@ async def get_file(file_id: str):
     return StreamingResponse(stream, media_type=media_type)
 
 def calc_mimetype(file_mimetype, filename):
-    if file_mimetype and file_mimetype.startswith('video/'):
+    prefix = 'video/'
+
+    if file_mimetype and file_mimetype.startswith(prefix):
         return file_mimetype
 
     if filename:
         mimetype, _ = mimetypes.guess_type(filename)
-        if mimetype:
+        if mimetype and mimetype.startswith(prefix):
             return mimetype
 
     return None
