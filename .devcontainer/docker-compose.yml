@@ -1,4 +1,10 @@
 services:
+
+  mongo:
+    image: mongo
+    volumes:
+      - mongo-data:/data/db
+
   app:
     build:
       context: ..
@@ -7,5 +13,12 @@ services:
       - "8000:8000"
     volumes:
       - ..:/app
+    depends_on:
+      - mongo
     tty: true
     command: /bin/bash
+
+volumes:
+
+  mongo-data:
+    driver: local
