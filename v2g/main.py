@@ -8,9 +8,9 @@ from fastapi.responses import StreamingResponse
 
 import gridfs
 from pymongo import AsyncMongoClient
-from bson import ObjectId
 
 from v2g.config import settings
+from v2g.models import TypeObjectId, Conversion
 
 logging.basicConfig(level=logging.INFO)
 
@@ -20,7 +20,7 @@ mongo_client = AsyncMongoClient(
     port=settings.mongodb.port,
 )
 
-@app.post('/')
+@app.post('/', response_model=Conversion)
 async def convert_video(file: UploadFile):
     filename = file.filename
 
@@ -45,30 +45,26 @@ async def convert_video(file: UploadFile):
     inserted_result = await collection.insert_one(conversion)
     conversion_id = inserted_result.inserted_id
 
-    return {'id': str(conversion_id), 'video_file_id': str(mongo_video_id), 'gif_file_id': str(mongo_gif_id)}
+    return {'_id': conversion_id, 'video_file_id': mongo_video_id, 'gif_file_id': mongo_gif_id}
 
-@app.get('/conversion/{conversion_id}')
-async def get_conversion(conversion_id: str):
+@app.get('/conversion/{conversion_id}', response_model=Conversion)
+async def get_conversion(conversion_id: TypeObjectId):
     db = mongo_client.get_database(settings.mongodb.dbname)
     collection = db.get_collection('conversions')
 
-    conversion = await collection.find_one({'_id': ObjectId(conversion_id)})
+    conversion = await collection.find_one({'_id': conversion_id})
     if not conversion:
         raise HTTPException(status_code=404)
 
-    return {
-        'id': str(conversion['_id']),
-        'video_file_id': str(conversion['video_file_id']),
-        'gif_file_id': conversion['gif_file_id'] and str(conversion['gif_file_id']),
-    }
+    return conversion
 
 @app.get('/file/{file_id}')
-async def get_file(file_id: str):
+async def get_file(file_id: TypeObjectId):
     db = mongo_client.get_database(settings.mongodb.dbname)
     bucket = gridfs.AsyncGridFSBucket(db, 'files')
 
     try:
-        stream = await bucket.open_download_stream(ObjectId(file_id))
+        stream = await bucket.open_download_stream(file_id)
     except gridfs.NoFile:
         raise HTTPException(status_code=404)
 
