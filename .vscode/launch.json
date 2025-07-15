@@ -1,19 +1,16 @@
 {
     "configurations": [
         {
-            "name": "Python Debugger: FastAPI",
+            "name": "Dev",
             "type": "debugpy",
             "request": "launch",
-            "module": "uvicorn",
+            "program": "main.py",
             "cwd": "${workspaceFolder}/v2g",
-            "args": [
-                "main:app",
-                "--reload",
-                "--host",
-                "0.0.0.0"
-            ],
-            "console": "internalConsole"
+            "console": "internalConsole",
             // "jinja": true
-        }
+            "env": {
+                "UVICORN__DEV": "1"
+            }
+        },
     ]
 }

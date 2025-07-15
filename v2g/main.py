@@ -3,8 +3,6 @@ import tempfile
 import mimetypes
 from subprocess import Popen
 
-import uvicorn
-
 from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 
@@ -12,10 +10,15 @@ import gridfs
 from pymongo import AsyncMongoClient
 from bson import ObjectId
 
+from v2g.config import settings
+
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI()
-mongo_client = AsyncMongoClient(host='mongo', port=27017)
+mongo_client = AsyncMongoClient(
+    host=settings.mongodb.host,
+    port=settings.mongodb.port,
+)
 
 @app.post('/')
 async def convert_video(file: UploadFile):
@@ -26,7 +29,7 @@ async def convert_video(file: UploadFile):
     if content_type:
         metadata['contentType'] = content_type
 
-    db = mongo_client.get_database('conversions')
+    db = mongo_client.get_database(settings.mongodb.dbname)
     bucket = gridfs.AsyncGridFSBucket(db, 'files')
     mongo_video_id = await bucket.upload_from_stream(filename or '', file, metadata=metadata)
 
@@ -43,7 +46,7 @@ async def convert_video(file: UploadFile):
 
 @app.get('/conversion/{conversion_id}')
 async def get_conversion(conversion_id: str):
-    db = mongo_client.get_database('conversions')
+    db = mongo_client.get_database(settings.mongodb.dbname)
     collection = db.get_collection('conversions')
 
     conversion = await collection.find_one({'_id': ObjectId(conversion_id)})
@@ -58,7 +61,7 @@ async def get_conversion(conversion_id: str):
 
 @app.get('/file/{file_id}')
 async def get_file(file_id: str):
-    db = mongo_client.get_database('conversions')
+    db = mongo_client.get_database(settings.mongodb.dbname)
     bucket = gridfs.AsyncGridFSBucket(db, 'files')
 
     try:
@@ -95,11 +98,27 @@ async def convert_video_to_gif(file: UploadFile):
                 logging.error(f'Could convert a video file to a gif file. ffmpeg exit code: {code}')
                 raise Exception(f'Could convert a video file to a gif file. ffmpeg exit code: {code}')
 
-            db = mongo_client.get_database('conversions')
+            db = mongo_client.get_database(settings.mongodb.dbname)
             bucket = gridfs.AsyncGridFSBucket(db, 'files')
             metadata = {'contentType': 'image/gif'}
             mongo_gif_id = await bucket.upload_from_stream((file.filename or 'video') + '.gif', file_output, metadata=metadata)
             return mongo_gif_id
 
 if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8000)
+    import uvicorn
+    import multiprocessing
+
+    dev = settings.uvicorn.dev
+
+    if dev:
+        workers = 1
+    else:
+        workers = multiprocessing.cpu_count() * 2 + 1
+
+    uvicorn.run(
+        app='main:app',
+        host=settings.uvicorn.host,
+        port=settings.uvicorn.port,
+        workers=workers,
+        reload=dev,
+    )

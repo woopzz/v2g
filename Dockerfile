@@ -20,6 +20,8 @@ WORKDIR $WORKDIR
 COPY requirements.txt $WORKDIR
 RUN pip install -r requirements.txt
 
+ENV PYTHONPATH=/app
+
 RUN chown -R $USERNAME:$USERNAME $WORKDIR
 
 USER $USERNAME
