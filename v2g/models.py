@@ -10,7 +10,7 @@ class TypeObjectId:
 
     @classmethod
     def __get_pydantic_core_schema__(cls, source_type: Any, handler: GetCoreSchemaHandler) -> CoreSchema:
-        def validate(value: str) -> bson.ObjectId:
+        def validate(value: str | bson.ObjectId) -> bson.ObjectId:
             try:
                 return bson.ObjectId(value)
             except bson.errors.InvalidId:
