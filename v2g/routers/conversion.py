@@ -4,20 +4,16 @@ from fastapi import APIRouter, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 
 import gridfs
-from pymongo import AsyncMongoClient
 
 from v2g.config import settings
 from v2g.models import TypeObjectId, Conversion
 from v2g.tasks import convert_video_to_gif
+from .dependencies import MongoClientDep
 
 router = APIRouter()
-mongo_client = AsyncMongoClient(
-    host=settings.mongodb.host,
-    port=settings.mongodb.port,
-)
 
 @router.post('/', response_model=Conversion)
-async def convert_video(file: UploadFile):
+async def convert_video(file: UploadFile, mongo_client: MongoClientDep):
     filename = file.filename
 
     content_type = calc_mimetype(file.content_type, filename)
@@ -44,7 +40,7 @@ async def convert_video(file: UploadFile):
     return conversion
 
 @router.get('/{conversion_id}', response_model=Conversion)
-async def get_conversion(conversion_id: TypeObjectId):
+async def get_conversion(conversion_id: TypeObjectId, mongo_client: MongoClientDep):
     db = mongo_client.get_database(settings.mongodb.dbname)
     collection = db.get_collection('conversions')
 
@@ -55,7 +51,7 @@ async def get_conversion(conversion_id: TypeObjectId):
     return conversion
 
 @router.get('/file/{file_id}')
-async def get_file(file_id: TypeObjectId):
+async def get_file(file_id: TypeObjectId, mongo_client: MongoClientDep):
     db = mongo_client.get_database(settings.mongodb.dbname)
     bucket = gridfs.AsyncGridFSBucket(db, 'files')
 
