@@ -1,7 +1,5 @@
 import logging
-import tempfile
 import mimetypes
-from subprocess import Popen
 
 from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
@@ -11,6 +9,7 @@ from pymongo import AsyncMongoClient
 
 from v2g.config import settings
 from v2g.models import TypeObjectId, Conversion
+from v2g.tasks import convert_video_to_gif
 
 logging.basicConfig(level=logging.INFO)
 
@@ -36,16 +35,16 @@ async def convert_video(file: UploadFile):
     bucket = gridfs.AsyncGridFSBucket(db, 'files')
     mongo_video_id = await bucket.upload_from_stream(filename or '', file, metadata=metadata)
 
-    file.file.seek(0)
-    mongo_gif_id = await convert_video_to_gif(file)
-
-    conversion = {'video_file_id': mongo_video_id, 'gif_file_id': mongo_gif_id}
+    conversion = {'video_file_id': mongo_video_id, 'gif_file_id': None}
 
     collection = db.get_collection('conversions')
     inserted_result = await collection.insert_one(conversion)
     conversion_id = inserted_result.inserted_id
 
-    return {'_id': conversion_id, 'video_file_id': mongo_video_id, 'gif_file_id': mongo_gif_id}
+    convert_video_to_gif.delay(str(conversion_id))
+
+    conversion['_id'] = conversion_id
+    return conversion
 
 @app.get('/conversion/{conversion_id}', response_model=Conversion)
 async def get_conversion(conversion_id: TypeObjectId):
@@ -85,25 +84,6 @@ def calc_mimetype(file_mimetype, filename):
             return mimetype
 
     return None
-
-async def convert_video_to_gif(file: UploadFile):
-    with tempfile.NamedTemporaryFile('wb') as file_input:
-        file_input.write(await file.read())
-
-        # We have to specify the .gif suffix so ffmpeg understands the format of the output file.
-        with tempfile.NamedTemporaryFile('rb', suffix='.gif') as file_output:
-            # We use -y to automatically agree on file replacement.
-            popen = Popen(['ffmpeg', '-y', '-i', file_input.name, file_output.name])
-            code = popen.wait()
-            if code != 0:
-                logging.error(f'Could convert a video file to a gif file. ffmpeg exit code: {code}')
-                raise Exception(f'Could convert a video file to a gif file. ffmpeg exit code: {code}')
-
-            db = mongo_client.get_database(settings.mongodb.dbname)
-            bucket = gridfs.AsyncGridFSBucket(db, 'files')
-            metadata = {'contentType': 'image/gif'}
-            mongo_gif_id = await bucket.upload_from_stream((file.filename or 'video') + '.gif', file_output, metadata=metadata)
-            return mongo_gif_id
 
 if __name__ == '__main__':
     import uvicorn

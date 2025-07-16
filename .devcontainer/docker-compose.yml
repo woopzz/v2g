@@ -5,6 +5,9 @@ services:
     volumes:
       - mongo-data:/data/db
 
+  redis:
+    image: redis
+
   app:
     build:
       context: ..
@@ -15,6 +18,7 @@ services:
       - ..:/app
     depends_on:
       - mongo
+      - redis
     tty: true
     command: /bin/bash
 

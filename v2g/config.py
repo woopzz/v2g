@@ -14,10 +14,16 @@ class MongoDBConfig(BaseModel):
     dbname: str = 'general'
 
 
+class RedisConfig(BaseModel):
+    host: str = 'redis'
+    port: int = 6379
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_nested_delimiter='__')
     uvicorn: UvicornConfig = Field(default_factory=UvicornConfig)
     mongodb: MongoDBConfig = Field(default_factory=MongoDBConfig)
+    redis: RedisConfig = Field(default_factory=RedisConfig)
 
 
 settings = Settings()
