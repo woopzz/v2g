@@ -8,12 +8,12 @@ import gridfs
 from v2g.config import settings
 from v2g.models import TypeObjectId, Conversion
 from v2g.tasks import convert_video_to_gif
-from .dependencies import MongoClientDep
+from .dependencies import MongoClientDep, CurrentUser
 
 router = APIRouter()
 
 @router.post('/', response_model=Conversion)
-async def convert_video(file: UploadFile, mongo_client: MongoClientDep):
+async def convert_video(file: UploadFile, mongo_client: MongoClientDep, current_user: CurrentUser):
     filename = file.filename
 
     content_type = calc_mimetype(file.content_type, filename)
@@ -28,7 +28,7 @@ async def convert_video(file: UploadFile, mongo_client: MongoClientDep):
     bucket = gridfs.AsyncGridFSBucket(db, 'files')
     mongo_video_id = await bucket.upload_from_stream(filename or '', file, metadata=metadata)
 
-    conversion = {'video_file_id': mongo_video_id, 'gif_file_id': None}
+    conversion = {'owner_id': current_user.id, 'video_file_id': mongo_video_id, 'gif_file_id': None}
 
     collection = db.get_collection('conversions')
     inserted_result = await collection.insert_one(conversion)

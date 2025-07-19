@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from pymongo import AsyncMongoClient
 
 from v2g.config import settings
+from v2g.routers.login import router as router_login
+from v2g.routers.user import router as router_user
 from v2g.routers.conversion import router as router_conversion
 
 @asynccontextmanager
@@ -15,6 +17,8 @@ async def lifespan(app: FastAPI):
         yield {'mongo_client': mongo_client}
 
 app = FastAPI(lifespan=lifespan)
+app.include_router(router_login, prefix='/login')
+app.include_router(router_user, prefix='/user')
 app.include_router(router_conversion, prefix='/conversion')
 
 if __name__ == '__main__':

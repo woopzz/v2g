@@ -1,3 +1,5 @@
+import secrets
+
 from pydantic import Field, BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -21,6 +23,8 @@ class RedisConfig(BaseModel):
 
 class Settings(BaseSettings):
     workdir: str
+    secret: str = secrets.token_urlsafe(32)
+    jwt_lifetime_in_minutes: int = 60 * 24 * 7
 
     model_config = SettingsConfigDict(env_nested_delimiter='__')
     uvicorn: UvicornConfig = Field(default_factory=UvicornConfig)

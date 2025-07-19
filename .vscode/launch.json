@@ -10,7 +10,8 @@
             "justMyCode": false,
             // "jinja": true
             "env": {
-                "UVICORN__DEV": "1"
+                "UVICORN__DEV": "1",
+                "SECRET": "SECRET"
             }
         },
     ]
