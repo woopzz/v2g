@@ -20,6 +20,8 @@ class RedisConfig(BaseModel):
 
 
 class Settings(BaseSettings):
+    workdir: str
+
     model_config = SettingsConfigDict(env_nested_delimiter='__')
     uvicorn: UvicornConfig = Field(default_factory=UvicornConfig)
     mongodb: MongoDBConfig = Field(default_factory=MongoDBConfig)
