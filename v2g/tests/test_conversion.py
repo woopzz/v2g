@@ -8,18 +8,14 @@ from fastapi.testclient import TestClient
 
 from v2g.main import app
 from v2g.config import settings
-from v2g.security import create_token
 from v2g.tasks import convert_video_to_gif
 from v2g.routers.conversion import create_conversion
-from .utils import create_user
+from .utils import create_user_and_token
 
 @pytest.mark.asyncio
 @patch('v2g.routers.conversion.convert_video_to_gif')
 async def test_conversion(mock_convert_video_to_gif, mongo_client):
-    username = 'test'
-    password = 'testtest'
-    user_id = await create_user(username, password, mongo_client)
-    token = create_token(str(user_id))
+    _, token = await create_user_and_token(mongo_client)
 
     with TestClient(app) as client:
 
@@ -84,10 +80,7 @@ async def test_conversion(mock_convert_video_to_gif, mongo_client):
 
 @pytest.mark.asyncio
 async def test_should_discard_conversion_if_invalid_media_type(mongo_client):
-    username = 'test'
-    password = 'testtest'
-    user_id = await create_user(username, password, mongo_client)
-    token = create_token(str(user_id))
+    _, token = await create_user_and_token(mongo_client)
 
     with TestClient(app) as client:
         file_input = io.BytesIO(b'qwerty')
@@ -101,10 +94,7 @@ async def test_should_discard_conversion_if_invalid_media_type(mongo_client):
 
 @pytest.mark.asyncio
 async def test_should_get_404_if_there_is_no_conversion(mongo_client):
-    username = 'test'
-    password = 'testtest'
-    user_id = await create_user(username, password, mongo_client)
-    token = create_token(str(user_id))
+    _, token = await create_user_and_token(mongo_client)
 
     with TestClient(app) as client:
         conversation_id = bson.ObjectId()
@@ -117,10 +107,7 @@ async def test_should_get_404_if_there_is_no_conversion(mongo_client):
 
 @pytest.mark.asyncio
 async def test_should_get_404_if_there_is_no_file(mongo_client):
-    username = 'test'
-    password = 'testtest'
-    user_id = await create_user(username, password, mongo_client)
-    token = create_token(str(user_id))
+    _, token = await create_user_and_token(mongo_client)
 
     with TestClient(app) as client:
         conversation_id = bson.ObjectId()
@@ -133,10 +120,7 @@ async def test_should_get_404_if_there_is_no_file(mongo_client):
 
 @pytest.mark.asyncio
 async def test_should_get_404_if_not_own_conversion(mongo_client):
-    username = 'test'
-    password = 'testtest'
-    user_id = await create_user(username, password, mongo_client)
-    token = create_token(str(user_id))
+    _, token = await create_user_and_token(mongo_client)
 
     another_user_id = bson.ObjectId()
     conversion = await create_conversion(
@@ -155,10 +139,7 @@ async def test_should_get_404_if_not_own_conversion(mongo_client):
 
 @pytest.mark.asyncio
 async def test_should_get_404_if_not_own_file(mongo_client):
-    username = 'test'
-    password = 'testtest'
-    user_id = await create_user(username, password, mongo_client)
-    token = create_token(str(user_id))
+    _, token = await create_user_and_token(mongo_client)
 
     another_user_id = bson.ObjectId()
     conversion = await create_conversion(

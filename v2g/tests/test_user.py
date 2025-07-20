@@ -3,8 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from v2g.main import app
-from v2g.security import create_token
-from .utils import delete_user, create_user
+from .utils import delete_user, create_user, create_user_and_token
 
 @pytest.mark.asyncio
 async def test_should_create_user(mongo_client):
@@ -67,9 +66,7 @@ async def test_should_get_400_if_user_exists(mongo_client):
 async def test_should_get_my_user_info(mongo_client):
     username = 'test'
     password = 'testtest'
-    user_id = await create_user(username, password, mongo_client)
-
-    token = create_token(str(user_id))
+    user_id, token = await create_user_and_token(mongo_client, username=username, password=password)
 
     with TestClient(app) as client:
         response = client.get('/user/me', headers={'Authorization': 'Bearer ' + token.access_token})
