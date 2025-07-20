@@ -12,7 +12,7 @@ from v2g.tasks import convert_video_to_gif
 
 @pytest.mark.asyncio
 @patch('v2g.routers.conversion.convert_video_to_gif')
-async def test_converion(mock_convert_video_to_gif):
+async def test_conversion(mock_convert_video_to_gif):
     with TestClient(app) as client:
 
         # Should run conversion.
@@ -65,7 +65,7 @@ async def test_converion(mock_convert_video_to_gif):
 async def test_should_discard_conversion_if_invalid_media_type():
     with TestClient(app) as client:
         file_input = io.BytesIO(b'qwerty')
-        response = client.post(f'/conversion', files={'file': file_input})
+        response = client.post('/conversion', files={'file': file_input})
         assert response.status_code == 400
         assert response.json() == {'detail': 'Invalid media type. Expected video/*'}
 
