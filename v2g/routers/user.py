@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 
 from v2g.models import UserPublic, UserCreate
 from v2g.config import settings
+from v2g.security import get_password_hash
 from .dependencies import MongoClientDep, CurrentUser
 
 router = APIRouter()
@@ -34,6 +35,8 @@ async def create_user(create_data: UserCreate, mongo_client: MongoClientDep):
         raise HTTPException(status_code=400, detail='This username is already taken.')
 
     user = create_data.model_dump()
+    user['password'] = get_password_hash(user['password'])
+
     result = await collection.insert_one(user)
     user_id = result.inserted_id
 

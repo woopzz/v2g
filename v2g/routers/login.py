@@ -1,21 +1,20 @@
-import datetime as dt
 from typing import Annotated
 
-import jwt
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 
 from v2g.models import Token
 from v2g.config import settings
+from v2g.security import create_token, verify_password
 from .dependencies import MongoClientDep
 
 router = APIRouter()
 
-@router.post('/access-token')
+@router.post('/access-token', response_model=Token)
 async def get_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     mongo_client: MongoClientDep,
-) -> Token:
+):
     username = form_data.username
     password = form_data.password
 
@@ -23,17 +22,8 @@ async def get_access_token(
     collection = db.get_collection('users')
 
     result = await collection.find_one({'username': username})
-    if not result or result['password'] != password:
+    if not (result and verify_password(password, result['password'])):
         raise HTTPException(status_code=404, detail='Not found any user with these credentials.')
 
     user_id = result['_id']
-
-    claims = {
-        'sub': str(user_id),
-        'exp': (
-            dt.datetime.now(dt.timezone.utc)
-            + dt.timedelta(minutes=settings.jwt_lifetime_in_minutes)
-        ),
-    }
-    access_token = jwt.encode(claims, settings.secret, algorithm='HS256')
-    return Token(access_token=access_token)
+    return create_token(str(user_id))
