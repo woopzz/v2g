@@ -8,18 +8,29 @@ from fastapi.testclient import TestClient
 
 from v2g.main import app
 from v2g.config import settings
+from v2g.security import create_token
 from v2g.tasks import convert_video_to_gif
+from .utils import create_user
 
 @pytest.mark.asyncio
 @patch('v2g.routers.conversion.convert_video_to_gif')
-async def test_conversion(mock_convert_video_to_gif):
+async def test_conversion(mock_convert_video_to_gif, mongo_client):
+    username = 'test'
+    password = 'testtest'
+    user_id = await create_user(username, password, mongo_client)
+    token = create_token(str(user_id))
+
     with TestClient(app) as client:
 
         # Should run conversion.
 
         path_to_video = os.path.join(settings.workdir, 'v2g', 'tests', 'cat.mp4')
         with open(path_to_video, 'rb') as file_input:
-            response = client.post(f'/conversion', files={'file': file_input})
+            response = client.post(
+                '/conversion',
+                files={'file': file_input},
+                headers={'Authorization': 'Bearer ' + token.access_token},
+            )
             assert response.status_code == 200
             result = response.json()
 
@@ -62,10 +73,19 @@ async def test_conversion(mock_convert_video_to_gif):
         assert response.headers['content-type'] == 'image/gif'
 
 @pytest.mark.asyncio
-async def test_should_discard_conversion_if_invalid_media_type():
+async def test_should_discard_conversion_if_invalid_media_type(mongo_client):
+    username = 'test'
+    password = 'testtest'
+    user_id = await create_user(username, password, mongo_client)
+    token = create_token(str(user_id))
+
     with TestClient(app) as client:
         file_input = io.BytesIO(b'qwerty')
-        response = client.post('/conversion', files={'file': file_input})
+        response = client.post(
+            '/conversion',
+            files={'file': file_input},
+            headers={'Authorization': 'Bearer ' + token.access_token},
+        )
         assert response.status_code == 400
         assert response.json() == {'detail': 'Invalid media type. Expected video/*'}
 
