@@ -44,7 +44,7 @@ async def get_conversion(conversion_id: TypeObjectId, mongo_client: MongoClientD
     return conversion
 
 @router.get('/file/{file_id}')
-async def get_file(file_id: TypeObjectId, mongo_client: MongoClientDep):
+async def get_file(file_id: TypeObjectId, mongo_client: MongoClientDep, current_user: CurrentUser):
     db = mongo_client.get_database(settings.mongodb.dbname)
     bucket = gridfs.AsyncGridFSBucket(db, 'files')
 
@@ -54,9 +54,11 @@ async def get_file(file_id: TypeObjectId, mongo_client: MongoClientDep):
         raise HTTPException(status_code=404)
 
     metadata = stream.metadata
-    media_type = metadata and metadata.get('contentType') or None
 
-    return StreamingResponse(stream, media_type=media_type)
+    if metadata['owner_id'] != current_user.id:
+        raise HTTPException(status_code=404)
+
+    return StreamingResponse(stream, media_type=metadata['content_type'])
 
 def calc_mimetype(file_mimetype, filename):
     prefix = 'video/'
@@ -72,13 +74,13 @@ def calc_mimetype(file_mimetype, filename):
     return None
 
 async def create_conversion(
-    file: BinaryIO, filename: str, content_type: str | None,
+    file: BinaryIO, filename: str, content_type: str,
     owner_id: bson.ObjectId, mongo_client: AsyncMongoClient,
 ):
-    metadata = {}
-    if content_type:
-        metadata['contentType'] = content_type
-
+    metadata = {
+        'owner_id': owner_id,
+        'content_type': content_type,
+    }
     db = mongo_client.get_database(settings.mongodb.dbname)
     bucket = gridfs.AsyncGridFSBucket(db, 'files')
     mongo_video_id = await bucket.upload_from_stream(filename, file, metadata=metadata)

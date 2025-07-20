@@ -51,7 +51,10 @@ async def test_conversion(mock_convert_video_to_gif, mongo_client):
 
         # Should get the video file content.
 
-        response = client.get(f'/conversion/file/{video_file_id}')
+        response = client.get(
+            f'/conversion/file/{video_file_id}',
+            headers={'Authorization': 'Bearer ' + token.access_token},
+        )
         assert response.status_code == 200
         assert response.headers['content-type'] == 'video/mp4'
 
@@ -72,7 +75,10 @@ async def test_conversion(mock_convert_video_to_gif, mongo_client):
 
         # Should get the gif file content.
 
-        response = client.get(f'/conversion/file/{gif_file_id}')
+        response = client.get(
+            f'/conversion/file/{gif_file_id}',
+            headers={'Authorization': 'Bearer ' + token.access_token},
+        )
         assert response.status_code == 200
         assert response.headers['content-type'] == 'image/gif'
 
@@ -110,10 +116,18 @@ async def test_should_get_404_if_there_is_no_conversion(mongo_client):
         assert response.json() == {'detail': 'Not Found'}
 
 @pytest.mark.asyncio
-async def test_should_get_404_if_there_is_no_file():
+async def test_should_get_404_if_there_is_no_file(mongo_client):
+    username = 'test'
+    password = 'testtest'
+    user_id = await create_user(username, password, mongo_client)
+    token = create_token(str(user_id))
+
     with TestClient(app) as client:
         conversation_id = bson.ObjectId()
-        response = client.get(f'/conversion/file/{conversation_id}')
+        response = client.get(
+            f'/conversion/file/{conversation_id}',
+            headers={'Authorization': 'Bearer ' + token.access_token},
+        )
         assert response.status_code == 404
         assert response.json() == {'detail': 'Not Found'}
 
@@ -134,6 +148,28 @@ async def test_should_get_404_if_not_own_conversion(mongo_client):
     with TestClient(app) as client:
         response = client.get(
             f'/conversion/{conversion_id}',
+            headers={'Authorization': 'Bearer ' + token.access_token},
+        )
+        assert response.status_code == 404
+        assert response.json() == {'detail': 'Not Found'}
+
+@pytest.mark.asyncio
+async def test_should_get_404_if_not_own_file(mongo_client):
+    username = 'test'
+    password = 'testtest'
+    user_id = await create_user(username, password, mongo_client)
+    token = create_token(str(user_id))
+
+    another_user_id = bson.ObjectId()
+    conversion = await create_conversion(
+        io.BytesIO(b'123'), '', 'example/example',
+        another_user_id, mongo_client,
+    )
+    video_file_id = conversion['video_file_id']
+
+    with TestClient(app) as client:
+        response = client.get(
+            f'/conversion/file/{video_file_id}',
             headers={'Authorization': 'Bearer ' + token.access_token},
         )
         assert response.status_code == 404
