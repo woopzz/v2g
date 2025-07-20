@@ -10,6 +10,7 @@ from v2g.main import app
 from v2g.config import settings
 from v2g.security import create_token
 from v2g.tasks import convert_video_to_gif
+from v2g.routers.conversion import create_conversion
 from .utils import create_user
 
 @pytest.mark.asyncio
@@ -56,7 +57,10 @@ async def test_conversion(mock_convert_video_to_gif, mongo_client):
 
         # Get the updated conversion info (with the gif file id).
 
-        response = client.get(f'/conversion/{conversion_id}')
+        response = client.get(
+            f'/conversion/{conversion_id}',
+            headers={'Authorization': 'Bearer ' + token.access_token},
+        )
         assert response.status_code == 200
 
         result = response.json()
@@ -90,10 +94,18 @@ async def test_should_discard_conversion_if_invalid_media_type(mongo_client):
         assert response.json() == {'detail': 'Invalid media type. Expected video/*'}
 
 @pytest.mark.asyncio
-async def test_should_get_404_if_there_is_no_conversion():
+async def test_should_get_404_if_there_is_no_conversion(mongo_client):
+    username = 'test'
+    password = 'testtest'
+    user_id = await create_user(username, password, mongo_client)
+    token = create_token(str(user_id))
+
     with TestClient(app) as client:
         conversation_id = bson.ObjectId()
-        response = client.get(f'/conversion/{conversation_id}')
+        response = client.get(
+            f'/conversion/{conversation_id}',
+            headers={'Authorization': 'Bearer ' + token.access_token},
+        )
         assert response.status_code == 404
         assert response.json() == {'detail': 'Not Found'}
 
@@ -102,5 +114,27 @@ async def test_should_get_404_if_there_is_no_file():
     with TestClient(app) as client:
         conversation_id = bson.ObjectId()
         response = client.get(f'/conversion/file/{conversation_id}')
+        assert response.status_code == 404
+        assert response.json() == {'detail': 'Not Found'}
+
+@pytest.mark.asyncio
+async def test_should_get_404_if_not_own_conversion(mongo_client):
+    username = 'test'
+    password = 'testtest'
+    user_id = await create_user(username, password, mongo_client)
+    token = create_token(str(user_id))
+
+    another_user_id = bson.ObjectId()
+    conversion = await create_conversion(
+        io.BytesIO(b'123'), '', 'example/example',
+        another_user_id, mongo_client,
+    )
+    conversion_id = conversion['_id']
+
+    with TestClient(app) as client:
+        response = client.get(
+            f'/conversion/{conversion_id}',
+            headers={'Authorization': 'Bearer ' + token.access_token},
+        )
         assert response.status_code == 404
         assert response.json() == {'detail': 'Not Found'}

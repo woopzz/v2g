@@ -33,11 +33,11 @@ async def convert_video(file: UploadFile, mongo_client: MongoClientDep, current_
     return conversion
 
 @router.get('/{conversion_id}', response_model=Conversion)
-async def get_conversion(conversion_id: TypeObjectId, mongo_client: MongoClientDep):
+async def get_conversion(conversion_id: TypeObjectId, mongo_client: MongoClientDep, current_user: CurrentUser):
     db = mongo_client.get_database(settings.mongodb.dbname)
     collection = db.get_collection('conversions')
 
-    conversion = await collection.find_one({'_id': conversion_id})
+    conversion = await collection.find_one({'_id': conversion_id, 'owner_id': current_user.id})
     if not conversion:
         raise HTTPException(status_code=404)
 
