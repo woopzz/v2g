@@ -1,9 +1,12 @@
 import mimetypes
+from typing import BinaryIO
 
 from fastapi import APIRouter, UploadFile, HTTPException
 from fastapi.responses import StreamingResponse
 
+import bson
 import gridfs
+from pymongo import AsyncMongoClient
 
 from v2g.config import settings
 from v2g.models import TypeObjectId, Conversion
@@ -20,23 +23,13 @@ async def convert_video(file: UploadFile, mongo_client: MongoClientDep, current_
     if not content_type:
         raise HTTPException(status_code=400, detail='Invalid media type. Expected video/*')
 
-    metadata = {}
-    if content_type:
-        metadata['contentType'] = content_type
+    conversion = await create_conversion(
+        file.file, filename or '', content_type,
+        current_user.id, mongo_client,
+    )
 
-    db = mongo_client.get_database(settings.mongodb.dbname)
-    bucket = gridfs.AsyncGridFSBucket(db, 'files')
-    mongo_video_id = await bucket.upload_from_stream(filename or '', file, metadata=metadata)
+    convert_video_to_gif.delay(str(conversion['_id']))
 
-    conversion = {'owner_id': current_user.id, 'video_file_id': mongo_video_id, 'gif_file_id': None}
-
-    collection = db.get_collection('conversions')
-    inserted_result = await collection.insert_one(conversion)
-    conversion_id = inserted_result.inserted_id
-
-    convert_video_to_gif.delay(str(conversion_id))
-
-    conversion['_id'] = conversion_id
     return conversion
 
 @router.get('/{conversion_id}', response_model=Conversion)
@@ -77,3 +70,24 @@ def calc_mimetype(file_mimetype, filename):
             return mimetype
 
     return None
+
+async def create_conversion(
+    file: BinaryIO, filename: str, content_type: str | None,
+    owner_id: bson.ObjectId, mongo_client: AsyncMongoClient,
+):
+    metadata = {}
+    if content_type:
+        metadata['contentType'] = content_type
+
+    db = mongo_client.get_database(settings.mongodb.dbname)
+    bucket = gridfs.AsyncGridFSBucket(db, 'files')
+    mongo_video_id = await bucket.upload_from_stream(filename, file, metadata=metadata)
+
+    conversion = {'owner_id': owner_id, 'video_file_id': mongo_video_id, 'gif_file_id': None}
+
+    collection = db.get_collection('conversions')
+    inserted_result = await collection.insert_one(conversion)
+    conversion_id = inserted_result.inserted_id
+
+    conversion['_id'] = conversion_id
+    return conversion
