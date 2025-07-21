@@ -7,10 +7,16 @@ from v2g.models import Token
 from v2g.config import settings
 from v2g.security import create_token, verify_password
 from .dependencies import MongoClientDep
+from .utils import create_error_responses
 
 router = APIRouter()
 
-@router.post('/access-token', response_model=Token)
+@router.post(
+    path='/access-token',
+    response_model=Token,
+    summary='Create new token',
+    responses=create_error_responses({404}),
+)
 async def get_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     mongo_client: MongoClientDep,

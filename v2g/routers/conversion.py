@@ -12,10 +12,16 @@ from v2g.config import settings
 from v2g.models import TypeObjectId, Conversion
 from v2g.tasks import convert_video_to_gif
 from .dependencies import MongoClientDep, CurrentUser
+from .utils import create_error_responses
 
 router = APIRouter()
 
-@router.post('/', response_model=Conversion)
+@router.post(
+    path='/',
+    response_model=Conversion,
+    summary='Run new conversion',
+    responses=create_error_responses({400}, add_token_related_errors=True),
+)
 async def convert_video(file: UploadFile, mongo_client: MongoClientDep, current_user: CurrentUser):
     filename = file.filename
 
@@ -32,7 +38,12 @@ async def convert_video(file: UploadFile, mongo_client: MongoClientDep, current_
 
     return conversion
 
-@router.get('/{conversion_id}', response_model=Conversion)
+@router.get(
+    path='/{conversion_id}',
+    response_model=Conversion,
+    summary='Get conversion info',
+    responses=create_error_responses({404}, add_token_related_errors=True),
+)
 async def get_conversion(conversion_id: TypeObjectId, mongo_client: MongoClientDep, current_user: CurrentUser):
     db = mongo_client.get_database(settings.mongodb.dbname)
     collection = db.get_collection('conversions')
@@ -43,7 +54,15 @@ async def get_conversion(conversion_id: TypeObjectId, mongo_client: MongoClientD
 
     return conversion
 
-@router.get('/file/{file_id}')
+@router.get(
+    path='/file/{file_id}',
+    summary='Get file content (video or gif)',
+    responses={
+        **create_error_responses({404}, add_token_related_errors=True),
+        200: {'description': 'Returns a file stream.'}
+    },
+    response_class=StreamingResponse,
+)
 async def get_file(file_id: TypeObjectId, mongo_client: MongoClientDep, current_user: CurrentUser):
     db = mongo_client.get_database(settings.mongodb.dbname)
     bucket = gridfs.AsyncGridFSBucket(db, 'files')

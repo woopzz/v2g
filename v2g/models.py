@@ -1,6 +1,7 @@
 from typing import Any
 
-from pydantic import BaseModel, Field, GetCoreSchemaHandler
+from pydantic import BaseModel, Field, GetCoreSchemaHandler, GetJsonSchemaHandler
+from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema, PydanticCustomError, core_schema
 
 import bson
@@ -27,6 +28,21 @@ class TypeObjectId:
             python_schema=validation_schema,
             serialization=serialization_schema,
         )
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema: CoreSchema, handler: GetJsonSchemaHandler) -> JsonSchemaValue:
+        return {
+            'type': 'string',
+            'format': 'objectid',
+            'example': str(bson.ObjectId()),
+        }
+
+
+class ErrorResponse(BaseModel):
+    detail: str
+
+    class Config:
+        title = 'Error'
 
 
 class Token(BaseModel):
@@ -58,6 +74,7 @@ class UserPublic(BaseModel):
     conversions: list['Conversion']
 
     class Config:
+        title = 'User'
         arbitrary_types_allowed = True
 
 
