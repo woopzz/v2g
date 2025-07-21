@@ -9,7 +9,7 @@ from .utils import create_error_responses
 router = APIRouter()
 
 @router.get(
-    path='/me',
+    path='/me/',
     response_model=UserPublic,
     summary='Get info of my user',
     responses=create_error_responses({404}, add_token_related_errors=True),

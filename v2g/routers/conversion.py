@@ -39,7 +39,7 @@ async def convert_video(file: UploadFile, mongo_client: MongoClientDep, current_
     return conversion
 
 @router.get(
-    path='/{conversion_id}',
+    path='/{conversion_id}/',
     response_model=Conversion,
     summary='Get conversion info',
     responses=create_error_responses({404}, add_token_related_errors=True),
@@ -55,7 +55,7 @@ async def get_conversion(conversion_id: TypeObjectId, mongo_client: MongoClientD
     return conversion
 
 @router.get(
-    path='/file/{file_id}',
+    path='/file/{file_id}/',
     summary='Get file content (video or gif)',
     responses={
         **create_error_responses({404}, add_token_related_errors=True),

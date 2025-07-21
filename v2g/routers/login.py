@@ -12,7 +12,7 @@ from .utils import create_error_responses
 router = APIRouter()
 
 @router.post(
-    path='/access-token',
+    path='/access-token/',
     response_model=Token,
     summary='Create new token',
     responses=create_error_responses({404}),

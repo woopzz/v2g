@@ -12,7 +12,7 @@ async def get_mongo_client(request: Request):
 
 MongoClientDep = Annotated[AsyncMongoClient, Depends(get_mongo_client)]
 
-reusable_oauth2 = OAuth2PasswordBearer(tokenUrl='/login/access-token')
+reusable_oauth2 = OAuth2PasswordBearer(tokenUrl='/login/access-token/')
 TokenDep = Annotated[str, Depends(reusable_oauth2)]
 
 def get_current_user(token: TokenDep) -> User:
