@@ -1,0 +1,37 @@
+services:
+
+  mongo:
+    image: mongo
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis
+
+  workers:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - mongo
+      - redis
+    command: uv run ./scripts/run_workers.sh
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongo
+      - redis
+    env_file:
+      # You should provide at least "SECRET" or every process will have its own.
+      # It means your token will be valid only inside of the process that created it.
+      - .env
+
+volumes:
+
+  mongo-data:
+    driver: local

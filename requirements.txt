@@ -1,9 +1,0 @@
-fastapi[standard]
-celery[redis]
-passlib[bcrypt]
-pymongo>=4.13.2
-pydantic-settings>=2.10.1
-pytest>=8.4.1
-pytest-asyncio>=1.1.0
-httpx>=0.28.1
-PyJWT>=2.10.1

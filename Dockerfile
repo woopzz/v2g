@@ -1,28 +1,37 @@
-FROM python:3.13
+FROM python:3.13-slim-bookworm
+
+COPY --from=ghcr.io/astral-sh/uv:0.4.9 /uv /usr/local/bin/uv
 
 ARG USERNAME="peon"
 ARG USER_UID=1000
 ARG USER_GID=1000
 
-ARG WORKDIR=/app
-ENV WORKDIR $WORKDIR
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
 
-RUN \
-    # Create user.
-    groupadd --gid $USER_GID $USERNAME \
-    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-    # Update the package base.
-    && apt-get update \
-    # Install ffmpeg.
-    && apt-get install -y ffmpeg
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg=7:5.1.6-0+deb12u1
+
+ARG WORKDIR=/app
 
 WORKDIR $WORKDIR
 
-COPY requirements.txt $WORKDIR
-RUN pip install -r requirements.txt
+COPY . $WORKDIR
 
-ENV PYTHONPATH=/app
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-dev
+
+COPY . /app
+
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev
+
+ENV WORKDIR=$WORKDIR \
+    PYTHONPATH=$WORKDIR
 
 RUN chown -R $USERNAME:$USERNAME $WORKDIR
-
 USER $USERNAME
+
+CMD ["uv", "run", "./v2g/main.py"]
