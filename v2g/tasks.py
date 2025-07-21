@@ -1,5 +1,5 @@
 import tempfile
-from subprocess import Popen
+from subprocess import Popen, TimeoutExpired
 
 import bson
 import gridfs
@@ -42,7 +42,14 @@ def convert_video_to_gif(self, conversion_id: str):
         with tempfile.NamedTemporaryFile('rb', suffix='.gif') as file_output:
             # We use -y to automatically agree on file replacement.
             popen = Popen(['ffmpeg', '-y', '-i', file_input.name, file_output.name])
-            code = popen.wait()
+
+            timeout = settings.conversion_process_timeout_in_seconds
+            try:
+                code = popen.wait(timeout=timeout)
+            except TimeoutExpired:
+                logger.error(f'Exceeded the time limit of {timeout} seconds. Conversion: {conversion}')
+                raise self.retry()
+
             if code != 0:
                 logger.error(f'Could not convert a video file to a gif file. ffmpeg exit code: {code}. Conversion: {conversion}')
                 raise self.retry()

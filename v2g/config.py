@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     workdir: str
     secret: str = secrets.token_urlsafe(32)
     jwt_lifetime_in_minutes: int = 60 * 24 * 7
+    conversion_process_timeout_in_seconds: int = 60 * 3
 
     model_config = SettingsConfigDict(env_nested_delimiter='__')
     uvicorn: UvicornConfig = Field(default_factory=UvicornConfig)
