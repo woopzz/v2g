@@ -47,19 +47,10 @@ app.openapi = custom_openapi
 
 if __name__ == '__main__':
     import uvicorn
-    import multiprocessing
-
-    dev = settings.uvicorn.dev
-
-    if dev:
-        workers = 1
-    else:
-        workers = multiprocessing.cpu_count() * 2 + 1
-
     uvicorn.run(
         app='main:app',
         host=settings.uvicorn.host,
         port=settings.uvicorn.port,
-        workers=workers,
-        reload=dev,
+        workers=settings.uvicorn.workers,
+        reload=settings.uvicorn.reload,
     )

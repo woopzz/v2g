@@ -1,13 +1,15 @@
 import secrets
+import multiprocessing
 
 from pydantic import Field, BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class UvicornConfig(BaseModel):
-    dev: bool = False
     host: str = '0.0.0.0'
     port: int = 8000
+    workers: int = Field(default_factory=lambda: multiprocessing.cpu_count() * 2 + 1)
+    reload: bool = False
 
 
 class MongoDBConfig(BaseModel):

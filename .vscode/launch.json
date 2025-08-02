@@ -8,9 +8,9 @@
             "cwd": "${workspaceFolder}/v2g",
             "console": "internalConsole",
             "justMyCode": false,
-            // "jinja": true
             "env": {
-                "UVICORN__DEV": "1",
+                "UVICORN__WORKERS": "1",
+                "UVICORN__RELOAD": "1",
                 "SECRET": "SECRET"
             }
         },
