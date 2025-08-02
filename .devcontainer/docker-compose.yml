@@ -12,6 +12,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
+      target: dev
     ports:
       - "8000:8000"
     volumes:

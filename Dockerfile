@@ -1,4 +1,4 @@
-FROM python:3.13-slim-bookworm
+FROM python:3.13-slim-bookworm AS base
 
 COPY --from=ghcr.io/astral-sh/uv:0.4.9 /uv /usr/local/bin/uv
 
@@ -35,3 +35,14 @@ RUN chown -R $USERNAME:$USERNAME $WORKDIR
 USER $USERNAME
 
 CMD ["uv", "run", "./v2g/main.py"]
+
+FROM base as dev
+
+USER root
+
+RUN apt-get install -y --no-install-recommends \
+    sudo \
+    git
+RUN echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+USER $USERNAME

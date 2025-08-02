@@ -12,6 +12,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: base
     depends_on:
       - mongo
       - redis
@@ -21,6 +22,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: base
     ports:
       - "8000:8000"
     depends_on:
