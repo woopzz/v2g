@@ -9,7 +9,7 @@ ARG USER_GID=1000
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
 
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg=7:5.1.6-0+deb12u1
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg
 
 ARG WORKDIR=/app
 
