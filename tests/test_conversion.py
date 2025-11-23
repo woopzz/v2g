@@ -21,7 +21,7 @@ async def test_conversion(mock_convert_video_to_gif, mongo_client):
 
         # Should run conversion.
 
-        path_to_video = os.path.join(settings.workdir, 'v2g', 'tests', 'cat.mp4')
+        path_to_video = os.path.join(settings.workdir, 'tests', 'cat.mp4')
         with open(path_to_video, 'rb') as file_input:
             response = client.post(
                 '/conversion',
