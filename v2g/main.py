@@ -44,13 +44,3 @@ def custom_openapi():
     return app.openapi_schema
 
 app.openapi = custom_openapi
-
-if __name__ == '__main__':
-    import uvicorn
-    uvicorn.run(
-        app='main:app',
-        host=settings.uvicorn.host,
-        port=settings.uvicorn.port,
-        workers=settings.uvicorn.workers,
-        reload=settings.uvicorn.reload,
-    )
