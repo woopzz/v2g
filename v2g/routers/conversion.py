@@ -1,20 +1,21 @@
 import mimetypes
 from typing import BinaryIO
 
-from fastapi import APIRouter, UploadFile, HTTPException
-from fastapi.responses import StreamingResponse
-
 import bson
 import gridfs
+from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from pymongo import AsyncMongoClient
 
 from v2g.config import settings
-from v2g.models import TypeObjectId, Conversion
+from v2g.models import Conversion, TypeObjectId
 from v2g.tasks import convert_video_to_gif
-from .dependencies import MongoClientDep, CurrentUser
+
+from .dependencies import CurrentUser, MongoClientDep
 from .utils import create_error_responses
 
 router = APIRouter()
+
 
 @router.post(
     path='/',
@@ -30,13 +31,17 @@ async def convert_video(file: UploadFile, mongo_client: MongoClientDep, current_
         raise HTTPException(status_code=400, detail='Invalid media type. Expected video/*')
 
     conversion = await create_conversion(
-        file.file, filename or '', content_type,
-        current_user.id, mongo_client,
+        file.file,
+        filename or '',
+        content_type,
+        current_user.id,
+        mongo_client,
     )
 
     convert_video_to_gif.delay(str(conversion['_id']))
 
     return conversion
+
 
 @router.get(
     path='/{conversion_id}/',
@@ -44,7 +49,11 @@ async def convert_video(file: UploadFile, mongo_client: MongoClientDep, current_
     summary='Get conversion info',
     responses=create_error_responses({404}, add_token_related_errors=True),
 )
-async def get_conversion(conversion_id: TypeObjectId, mongo_client: MongoClientDep, current_user: CurrentUser):
+async def get_conversion(
+    conversion_id: TypeObjectId,
+    mongo_client: MongoClientDep,
+    current_user: CurrentUser,
+):
     db = mongo_client.get_database(settings.mongodb.dbname)
     collection = db.get_collection('conversions')
 
@@ -54,12 +63,13 @@ async def get_conversion(conversion_id: TypeObjectId, mongo_client: MongoClientD
 
     return conversion
 
+
 @router.get(
     path='/file/{file_id}/',
     summary='Get file content (video or gif)',
     responses={
         **create_error_responses({404}, add_token_related_errors=True),
-        200: {'description': 'Returns a file stream.'}
+        200: {'description': 'Returns a file stream.'},
     },
     response_class=StreamingResponse,
 )
@@ -79,6 +89,7 @@ async def get_file(file_id: TypeObjectId, mongo_client: MongoClientDep, current_
 
     return StreamingResponse(stream, media_type=metadata['content_type'])
 
+
 def calc_mimetype(file_mimetype, filename):
     prefix = 'video/'
 
@@ -92,9 +103,13 @@ def calc_mimetype(file_mimetype, filename):
 
     return None
 
+
 async def create_conversion(
-    file: BinaryIO, filename: str, content_type: str,
-    owner_id: bson.ObjectId, mongo_client: AsyncMongoClient,
+    file: BinaryIO,
+    filename: str,
+    content_type: str,
+    owner_id: bson.ObjectId,
+    mongo_client: AsyncMongoClient,
 ):
     metadata = {
         'owner_id': owner_id,

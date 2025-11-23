@@ -6,11 +6,13 @@ import bson
 import pytest
 from fastapi.testclient import TestClient
 
-from v2g.main import app
 from v2g.config import settings
-from v2g.tasks import convert_video_to_gif
+from v2g.main import app
 from v2g.routers.conversion import create_conversion
+from v2g.tasks import convert_video_to_gif
+
 from .utils import create_user_and_token
+
 
 @pytest.mark.asyncio
 @patch('v2g.routers.conversion.convert_video_to_gif')
@@ -18,7 +20,6 @@ async def test_conversion(mock_convert_video_to_gif, mongo_client):
     _, token = await create_user_and_token(mongo_client)
 
     with TestClient(app) as client:
-
         # Should run conversion.
 
         path_to_video = os.path.join(settings.workdir, 'tests', 'cat.mp4')
@@ -78,6 +79,7 @@ async def test_conversion(mock_convert_video_to_gif, mongo_client):
         assert response.status_code == 200
         assert response.headers['content-type'] == 'image/gif'
 
+
 @pytest.mark.asyncio
 async def test_should_discard_conversion_if_invalid_media_type(mongo_client):
     _, token = await create_user_and_token(mongo_client)
@@ -92,6 +94,7 @@ async def test_should_discard_conversion_if_invalid_media_type(mongo_client):
         assert response.status_code == 400
         assert response.json() == {'detail': 'Invalid media type. Expected video/*'}
 
+
 @pytest.mark.asyncio
 async def test_should_get_404_if_there_is_no_conversion(mongo_client):
     _, token = await create_user_and_token(mongo_client)
@@ -104,6 +107,7 @@ async def test_should_get_404_if_there_is_no_conversion(mongo_client):
         )
         assert response.status_code == 404
         assert response.json() == {'detail': 'Not Found'}
+
 
 @pytest.mark.asyncio
 async def test_should_get_404_if_there_is_no_file(mongo_client):
@@ -118,14 +122,18 @@ async def test_should_get_404_if_there_is_no_file(mongo_client):
         assert response.status_code == 404
         assert response.json() == {'detail': 'Not Found'}
 
+
 @pytest.mark.asyncio
 async def test_should_get_404_if_not_own_conversion(mongo_client):
     _, token = await create_user_and_token(mongo_client)
 
     another_user_id = bson.ObjectId()
     conversion = await create_conversion(
-        io.BytesIO(b'123'), '', 'example/example',
-        another_user_id, mongo_client,
+        io.BytesIO(b'123'),
+        '',
+        'example/example',
+        another_user_id,
+        mongo_client,
     )
     conversion_id = conversion['_id']
 
@@ -137,14 +145,18 @@ async def test_should_get_404_if_not_own_conversion(mongo_client):
         assert response.status_code == 404
         assert response.json() == {'detail': 'Not Found'}
 
+
 @pytest.mark.asyncio
 async def test_should_get_404_if_not_own_file(mongo_client):
     _, token = await create_user_and_token(mongo_client)
 
     another_user_id = bson.ObjectId()
     conversion = await create_conversion(
-        io.BytesIO(b'123'), '', 'example/example',
-        another_user_id, mongo_client,
+        io.BytesIO(b'123'),
+        '',
+        'example/example',
+        another_user_id,
+        mongo_client,
     )
     video_file_id = conversion['video_file_id']
 

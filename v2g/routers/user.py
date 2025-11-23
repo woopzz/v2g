@@ -1,12 +1,14 @@
 from fastapi import APIRouter, HTTPException
 
-from v2g.models import UserPublic, UserCreate
 from v2g.config import settings
+from v2g.models import UserCreate, UserPublic
 from v2g.security import get_password_hash
-from .dependencies import MongoClientDep, CurrentUser
+
+from .dependencies import CurrentUser, MongoClientDep
 from .utils import create_error_responses
 
 router = APIRouter()
+
 
 @router.get(
     path='/me/',
@@ -30,6 +32,7 @@ async def get_my_user(current_user: CurrentUser, mongo_client: MongoClientDep):
         username=user['username'],
         conversions=conversions,
     )
+
 
 @router.post(
     path='/',

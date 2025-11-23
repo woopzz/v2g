@@ -10,6 +10,7 @@ pwd_context = CryptContext(schemes=['bcrypt'])
 
 JWT_ALGORITHM = 'HS256'
 
+
 def create_token(sub):
     claims = {
         'sub': sub,
@@ -21,6 +22,7 @@ def create_token(sub):
     access_token = jwt.encode(claims, settings.secret, algorithm=JWT_ALGORITHM)
     return Token(access_token=access_token)
 
+
 def parse_token(token):
     try:
         claims = jwt.decode(token, settings.secret, algorithms=[JWT_ALGORITHM])
@@ -28,8 +30,10 @@ def parse_token(token):
     except jwt.PyJWTError:
         return False, None
 
+
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
+
 
 def get_password_hash(password):
     return pwd_context.hash(password)
