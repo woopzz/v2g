@@ -9,9 +9,7 @@
             "console": "internalConsole",
             "justMyCode": false,
             "env": {
-                "UVICORN__WORKERS": "1",
                 "UVICORN__RELOAD": "1",
-                "SECRET": "SECRET"
             }
         },
     ]
