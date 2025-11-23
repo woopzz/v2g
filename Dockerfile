@@ -35,14 +35,3 @@ RUN chown -R $USERNAME:$USERNAME $WORKDIR
 USER $USERNAME
 
 CMD ["uv", "run", "./v2g/main.py"]
-
-FROM base as dev
-
-USER root
-
-RUN apt-get install -y --no-install-recommends \
-    sudo \
-    git
-RUN echo "$USERNAME ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-
-USER $USERNAME
