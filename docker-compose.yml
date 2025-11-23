@@ -1,12 +1,12 @@
 services:
 
   mongo:
-    image: mongo:8.0.12
+    image: mongo:8.2
     volumes:
       - mongo-data:/data/db
 
   redis:
-    image: redis
+    image: redis:8.4
 
   workers:
     build:
