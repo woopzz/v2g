@@ -1,0 +1,7 @@
+cache-dir = "~/.cache/ruff"
+
+line-length = 100
+indent-width = 4
+
+[format]
+quote-style = "single"

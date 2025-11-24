@@ -1,28 +1,26 @@
 services:
 
   mongo:
-    image: mongo:8.0.12
+    image: mongo:8.2
     volumes:
       - mongo-data:/data/db
 
   redis:
-    image: redis
+    image: redis:8.4
 
   workers:
     build:
       context: .
       dockerfile: Dockerfile
-      target: base
     depends_on:
       - mongo
       - redis
-    command: uv run ./scripts/run_workers.sh
+    command: /app/run_workers.sh
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
-      target: base
     ports:
       - "8000:8000"
     depends_on:

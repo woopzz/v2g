@@ -3,7 +3,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from v2g.main import app
-from .utils import delete_user, create_user, create_user_and_token
+
+from .utils import create_user, create_user_and_token, delete_user
+
 
 @pytest.mark.asyncio
 async def test_should_create_user(mongo_client):
@@ -21,6 +23,7 @@ async def test_should_create_user(mongo_client):
         assert result['username'] == username
         assert result['conversions'] == []
 
+
 @pytest.mark.asyncio
 async def test_should_get_422_if_username_is_too_short():
     username = '1'
@@ -34,6 +37,7 @@ async def test_should_get_422_if_username_is_too_short():
         data = result['detail'][0]
         assert data['loc'] == ['body', 'username']
         assert data['msg'] == 'String should have at least 3 characters'
+
 
 @pytest.mark.asyncio
 async def test_should_get_422_if_password_is_too_short():
@@ -49,6 +53,7 @@ async def test_should_get_422_if_password_is_too_short():
         assert data['loc'] == ['body', 'password']
         assert data['msg'] == 'String should have at least 8 characters'
 
+
 @pytest.mark.asyncio
 async def test_should_get_400_if_user_exists(mongo_client):
     username = 'test'
@@ -61,6 +66,7 @@ async def test_should_get_400_if_user_exists(mongo_client):
 
         result = response.json()
         assert result['detail'] == 'This username is already taken.'
+
 
 @pytest.mark.asyncio
 async def test_should_get_my_user_info(mongo_client):
@@ -77,6 +83,7 @@ async def test_should_get_my_user_info(mongo_client):
         assert result['id'] == str(user_id)
         assert result['username'] == username
         assert result['conversions'] == []
+
 
 @pytest.mark.asyncio
 async def test_should_get_401_if_no_token():

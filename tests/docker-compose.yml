@@ -1,0 +1,33 @@
+services:
+
+  mongo:
+    image: mongo:8.2
+
+  redis:
+    image: redis:8.4
+
+  workers:
+    build:
+      context: ..
+      dockerfile: ./tests/Dockerfile
+    depends_on:
+      - mongo
+      - redis
+    command: /app/scripts/run_workers.sh
+
+  app:
+    build:
+      context: ..
+      dockerfile: ./tests/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../src:/app/src
+      - .:/app/tests
+      - ../.pytest.ini:/app/.pytest.ini
+      - ../.ruff.toml:/app/.ruff.toml
+    depends_on:
+      - mongo
+      - redis
+    tty: true
+    command: /bin/bash

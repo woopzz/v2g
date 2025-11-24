@@ -1,14 +1,13 @@
 import secrets
-import multiprocessing
 
-from pydantic import Field, BaseModel
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class UvicornConfig(BaseModel):
     host: str = '0.0.0.0'
     port: int = 8000
-    workers: int = Field(default_factory=lambda: multiprocessing.cpu_count() * 2 + 1)
+    workers: int = 1
     reload: bool = False
 
 
@@ -24,7 +23,7 @@ class RedisConfig(BaseModel):
 
 
 class Settings(BaseSettings):
-    workdir: str
+    workdir: str = '/app'
     secret: str = secrets.token_urlsafe(32)
     jwt_lifetime_in_minutes: int = 60 * 24 * 7
     conversion_process_timeout_in_seconds: int = 60 * 3

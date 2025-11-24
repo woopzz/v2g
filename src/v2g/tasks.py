@@ -3,10 +3,9 @@ from subprocess import Popen, TimeoutExpired
 
 import bson
 import gridfs
-from pymongo import MongoClient
-
 from celery import Celery
 from celery.utils.log import get_task_logger
+from pymongo import MongoClient
 
 from v2g.config import settings
 
@@ -21,6 +20,7 @@ mongo_client = MongoClient(
     host=settings.mongodb.host,
     port=settings.mongodb.port,
 )
+
 
 @celery_app.task(queue='conversion', bind=True, max_retries=3, default_retry_delay=30)
 def convert_video_to_gif(self, conversion_id: str):
@@ -47,11 +47,15 @@ def convert_video_to_gif(self, conversion_id: str):
             try:
                 code = popen.wait(timeout=timeout)
             except TimeoutExpired:
-                logger.error(f'Exceeded the time limit of {timeout} seconds. Conversion: {conversion}')
+                logger.error(
+                    f'Exceeded the time limit of {timeout} seconds. Conversion: {conversion}'
+                )
                 raise self.retry()
 
             if code != 0:
-                logger.error(f'Could not convert a video file to a gif file. ffmpeg exit code: {code}. Conversion: {conversion}')
+                logger.error(
+                    f'Could not convert a video file to a gif file. ffmpeg exit code: {code}. Conversion: {conversion}'
+                )
                 raise self.retry()
 
             metadata = {'content_type': 'image/gif', 'owner_id': video_metadata['owner_id']}

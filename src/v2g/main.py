@@ -5,9 +5,10 @@ from fastapi.openapi.utils import get_openapi
 from pymongo import AsyncMongoClient
 
 from v2g.config import settings
+from v2g.routers.conversion import router as router_conversion
 from v2g.routers.login import router as router_login
 from v2g.routers.user import router as router_user
-from v2g.routers.conversion import router as router_conversion
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,10 +18,12 @@ async def lifespan(app: FastAPI):
     ) as mongo_client:
         yield {'mongo_client': mongo_client}
 
+
 app = FastAPI(lifespan=lifespan)
 app.include_router(router_login, prefix='/login', tags=['Login'])
 app.include_router(router_user, prefix='/user', tags=['User'])
 app.include_router(router_conversion, prefix='/conversion', tags=['Conversion'])
+
 
 def custom_openapi():
     if app.openapi_schema:
@@ -43,14 +46,5 @@ def custom_openapi():
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
-app.openapi = custom_openapi
 
-if __name__ == '__main__':
-    import uvicorn
-    uvicorn.run(
-        app='main:app',
-        host=settings.uvicorn.host,
-        port=settings.uvicorn.port,
-        workers=settings.uvicorn.workers,
-        reload=settings.uvicorn.reload,
-    )
+app.openapi = custom_openapi

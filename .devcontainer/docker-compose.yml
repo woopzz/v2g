@@ -1,7 +1,7 @@
 services:
 
   mongo:
-    image: mongo:8.0.12
+    image: mongo:8.2
     volumes:
       - mongo-data:/data/db
 
@@ -11,8 +11,7 @@ services:
   app:
     build:
       context: ..
-      dockerfile: Dockerfile
-      target: dev
+      dockerfile: ./.devcontainer/Dockerfile
     ports:
       - "8000:8000"
     volumes:
@@ -20,6 +19,8 @@ services:
     depends_on:
       - mongo
       - redis
+    environment:
+      - SECRET=SECRET
     tty: true
     command: /bin/bash
 
