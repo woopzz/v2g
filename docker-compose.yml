@@ -15,7 +15,7 @@ services:
     depends_on:
       - mongo
       - redis
-    command: uv run ./scripts/run_workers.sh
+    command: /app/run_workers.sh
 
   app:
     build:
