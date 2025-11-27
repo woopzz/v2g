@@ -1,10 +1,11 @@
 import mimetypes
-from typing import BinaryIO
+from typing import Annotated, BinaryIO
 
 import bson
 import gridfs
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import HttpUrl
 from pymongo import AsyncMongoClient
 
 from v2g.config import settings
@@ -23,7 +24,13 @@ router = APIRouter()
     summary='Run new conversion',
     responses=create_error_responses({400}, add_token_related_errors=True),
 )
-async def convert_video(file: UploadFile, mongo_client: MongoClientDep, current_user: CurrentUser):
+async def convert_video(
+    *,
+    file: UploadFile,
+    webhook_url: Annotated[HttpUrl | None, Form()] = None,
+    mongo_client: MongoClientDep,
+    current_user: CurrentUser,
+):
     filename = file.filename
 
     content_type = calc_mimetype(file.content_type, filename)
@@ -36,6 +43,7 @@ async def convert_video(file: UploadFile, mongo_client: MongoClientDep, current_
         content_type,
         current_user.id,
         mongo_client,
+        webhook_url=webhook_url and webhook_url.unicode_string(),
     )
 
     convert_video_to_gif.delay(str(conversion['_id']))
@@ -110,6 +118,7 @@ async def create_conversion(
     content_type: str,
     owner_id: bson.ObjectId,
     mongo_client: AsyncMongoClient,
+    webhook_url: str | None = None,
 ):
     metadata = {
         'owner_id': owner_id,
@@ -119,7 +128,12 @@ async def create_conversion(
     bucket = gridfs.AsyncGridFSBucket(db, 'files')
     mongo_video_id = await bucket.upload_from_stream(filename, file, metadata=metadata)
 
-    conversion = {'owner_id': owner_id, 'video_file_id': mongo_video_id, 'gif_file_id': None}
+    conversion = {
+        'owner_id': owner_id,
+        'video_file_id': mongo_video_id,
+        'gif_file_id': None,
+        'webhook_url': webhook_url,
+    }
 
     collection = db.get_collection('conversions')
     inserted_result = await collection.insert_one(conversion)
