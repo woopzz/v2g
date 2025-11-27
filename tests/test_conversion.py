@@ -3,48 +3,72 @@ import os.path
 from unittest.mock import patch
 
 import bson
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+import v2g.tasks as tasks
 from v2g.config import settings
 from v2g.main import app
 from v2g.routers.conversion import create_conversion
-from v2g.tasks import convert_video_to_gif
 
 from .utils import create_user_and_token
 
 
 @pytest.mark.asyncio
-@patch('v2g.routers.conversion.convert_video_to_gif')
-async def test_conversion(mock_convert_video_to_gif, mongo_client):
+async def test_conversion(mongo_client):
+    webhook_url = 'http://localhost:8000/'
     _, token = await create_user_and_token(mongo_client)
 
     with TestClient(app) as client:
         # Should run conversion.
 
-        path_to_video = os.path.join(settings.workdir, 'tests', 'cat.mp4')
-        with open(path_to_video, 'rb') as file_input:
-            response = client.post(
-                '/conversion',
-                files={'file': file_input},
-                headers={'Authorization': 'Bearer ' + token.access_token},
-            )
-            assert response.status_code == 200
-            result = response.json()
+        with patch('v2g.routers.conversion.convert_video_to_gif') as mock_convert_video_to_gif:
+            path_to_video = os.path.join(settings.workdir, 'tests', 'cat.mp4')
+            with open(path_to_video, 'rb') as file_input:
+                response = client.post(
+                    '/conversion',
+                    data={'webhook_url': webhook_url},
+                    files={'file': file_input},
+                    headers={'Authorization': 'Bearer ' + token.access_token},
+                )
+                assert response.status_code == 200
+                result = response.json()
 
-        conversion_id = result['id']
-        video_file_id = result['video_file_id']
-        gif_file_id = result['gif_file_id']
+            conversion_id = result['id']
+            video_file_id = result['video_file_id']
+            gif_file_id = result['gif_file_id']
 
-        assert conversion_id and bson.ObjectId(conversion_id)
-        assert video_file_id and bson.ObjectId(video_file_id)
-        assert gif_file_id is None
+            assert conversion_id and bson.ObjectId(conversion_id)
+            assert video_file_id and bson.ObjectId(video_file_id)
+            assert gif_file_id is None
 
         mock_convert_video_to_gif.delay.assert_called_once_with(conversion_id)
 
-        # Trigger the conversion manually without messaging.
+        with patch('v2g.tasks.send_webhook_conversion_done') as mock_send_webhook_conversion_done:
+            tasks.convert_video_to_gif(conversion_id)
 
-        convert_video_to_gif(conversion_id)
+        mock_send_webhook_conversion_done.delay.assert_called_once_with(conversion_id)
+
+        with patch('httpx.Client.post') as mock_post:
+            mock_post.return_value = httpx.Response(200)
+            tasks.send_webhook_conversion_done(conversion_id)
+
+        collection = mongo_client[settings.mongodb.dbname]['conversions']
+        conversion = await collection.find_one({'_id': bson.ObjectId(conversion_id)})
+
+        gif_file_id = conversion['gif_file_id']
+        assert gif_file_id
+        gif_file_id = str(gif_file_id)
+
+        mock_post.assert_called_once_with(
+            webhook_url,
+            json={
+                'id': conversion_id,
+                'video_file_id': video_file_id,
+                'gif_file_id': gif_file_id,
+            },
+        )
 
         # Should get the video file content.
 
@@ -66,9 +90,8 @@ async def test_conversion(mock_convert_video_to_gif, mongo_client):
         result = response.json()
         assert result['id'] == conversion_id
         assert result['video_file_id'] == video_file_id
-
-        gif_file_id = result['gif_file_id']
-        assert gif_file_id and bson.ObjectId(gif_file_id)
+        assert result['gif_file_id'] == gif_file_id
+        assert result['webhook_url'] == webhook_url
 
         # Should get the gif file content.
 

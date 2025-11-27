@@ -92,6 +92,16 @@ class Conversion(BaseModel):
     owner_id: TypeObjectId = Field(exclude=True)
     video_file_id: TypeObjectId
     gif_file_id: TypeObjectId | None
+    webhook_url: str | None
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
+class ConversionWebhookBody(BaseModel):
+    id: TypeObjectId
+    video_file_id: TypeObjectId
+    gif_file_id: TypeObjectId
 
     class Config:
         arbitrary_types_allowed = True
