@@ -25,7 +25,7 @@ mongo_client = MongoClient(
 )
 
 
-@celery_app.task(queue='conversion', bind=True, max_retries=3, default_retry_delay=30)
+@celery_app.task(bind=True, max_retries=3, default_retry_delay=30)
 def convert_video_to_gif(self, conversion_id: str):
     conversion_id = bson.ObjectId(conversion_id)
 
