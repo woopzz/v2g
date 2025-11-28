@@ -13,6 +13,7 @@ dependencies = [
     "pymongo>=4.13.2",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
+    "slowapi>=0.1.9",
 ]
 
 [build-system]

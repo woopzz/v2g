@@ -28,10 +28,16 @@ class Settings(BaseSettings):
     jwt_lifetime_in_minutes: int = 60 * 24 * 7
     conversion_process_timeout_in_seconds: int = 60 * 3
 
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_CREATE_CONVERSIONS: str = '50/day; 10/hour'
+
     model_config = SettingsConfigDict(env_nested_delimiter='__')
     uvicorn: UvicornConfig = Field(default_factory=UvicornConfig)
     mongodb: MongoDBConfig = Field(default_factory=MongoDBConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)
+
+    def get_rate_limit_dsn(self):
+        return f'redis://{self.redis.host}:{self.redis.port}/1'
 
 
 settings = Settings()

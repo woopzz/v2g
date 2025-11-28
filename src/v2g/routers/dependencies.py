@@ -18,12 +18,14 @@ reusable_oauth2 = OAuth2PasswordBearer(tokenUrl='/login/access-token/')
 TokenDep = Annotated[str, Depends(reusable_oauth2)]
 
 
-def get_current_user(token: TokenDep) -> User:
+def get_current_user(request: Request, token: TokenDep) -> User:
     ok, data = parse_token(token)
     if not ok:
         raise HTTPException(status_code=403, detail='Could not validate credentials.')
 
-    return User(_id=data)
+    user = User(_id=data)
+    request.state.user = user
+    return user
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]

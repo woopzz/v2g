@@ -3,13 +3,14 @@ from typing import Annotated, BinaryIO
 
 import bson
 import gridfs
-from fastapi import APIRouter, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import HttpUrl
 from pymongo import AsyncMongoClient
 
 from v2g.config import settings
 from v2g.models import Conversion, TypeObjectId
+from v2g.rate_limiter import limiter
 from v2g.tasks import convert_video_to_gif
 
 from .dependencies import CurrentUser, MongoClientDep
@@ -24,10 +25,12 @@ router = APIRouter()
     summary='Run new conversion',
     responses=create_error_responses({400}, add_token_related_errors=True),
 )
+@limiter.limit(settings.RATE_LIMIT_CREATE_CONVERSIONS)
 async def convert_video(
     *,
     file: UploadFile,
     webhook_url: Annotated[HttpUrl | None, Form()] = None,
+    request: Request,
     mongo_client: MongoClientDep,
     current_user: CurrentUser,
 ):
