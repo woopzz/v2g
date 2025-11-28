@@ -3,9 +3,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.openapi.utils import get_openapi
 from pymongo import AsyncMongoClient
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from v2g.config import settings
 from v2g.models import ConversionWebhookBody
+from v2g.rate_limiter import limiter
 from v2g.routers.conversion import router as router_conversion
 from v2g.routers.login import router as router_login
 from v2g.routers.user import router as router_user
@@ -21,6 +24,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.include_router(router_login, prefix='/login', tags=['Login'])
 app.include_router(router_user, prefix='/user', tags=['User'])
 app.include_router(router_conversion, prefix='/conversion', tags=['Conversion'])
