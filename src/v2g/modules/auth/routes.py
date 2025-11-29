@@ -3,12 +3,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 
-from v2g.config import settings
-from v2g.models import Token
-from v2g.security import create_token, verify_password
-
-from .dependencies import MongoClientDep
-from .utils import create_error_responses
+from v2g.core.config import settings
+from v2g.core.dependencies import MongoClientDep
+from v2g.core.models import Token
+from v2g.core.security import create_token, verify_password
+from v2g.core.utils import create_error_responses
 
 router = APIRouter()
 

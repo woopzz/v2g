@@ -1,5 +1,5 @@
-from v2g.config import settings
-from v2g.security import create_token, get_password_hash
+from v2g.core.config import settings
+from v2g.core.security import create_token, get_password_hash
 
 
 async def create_user(username, password, mongo_client):

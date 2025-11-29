@@ -1,7 +1,7 @@
 from fastapi import HTTPException, Request
 from slowapi import Limiter
 
-from v2g.config import settings
+from v2g.core.config import settings
 
 
 def get_rate_limit_key(request: Request):

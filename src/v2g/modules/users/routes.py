@@ -1,11 +1,10 @@
 from fastapi import APIRouter, HTTPException
 
-from v2g.config import settings
-from v2g.models import UserCreate, UserPublic
-from v2g.security import get_password_hash
-
-from .dependencies import CurrentUser, MongoClientDep
-from .utils import create_error_responses
+from v2g.core.config import settings
+from v2g.core.dependencies import CurrentUser, MongoClientDep
+from v2g.core.models import UserCreate, UserPublic
+from v2g.core.security import get_password_hash
+from v2g.core.utils import create_error_responses
 
 router = APIRouter()
 

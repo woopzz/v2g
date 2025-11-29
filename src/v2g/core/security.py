@@ -3,8 +3,8 @@ import datetime as dt
 import jwt
 from passlib.context import CryptContext
 
-from v2g.config import settings
-from v2g.models import Token
+from v2g.core.config import settings
+from v2g.core.models import Token
 
 pwd_context = CryptContext(schemes=['bcrypt'])
 

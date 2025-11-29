@@ -4,8 +4,8 @@ from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 from pymongo import AsyncMongoClient
 
-from v2g.models import User
-from v2g.security import parse_token
+from v2g.core.models import User
+from v2g.core.security import parse_token
 
 
 async def get_mongo_client(request: Request):

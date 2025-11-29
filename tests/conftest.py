@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pymongo import AsyncMongoClient
 
-from v2g.config import settings
+from v2g.core.config import settings
 
 
 @pytest.fixture

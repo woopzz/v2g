@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from v2g.main import app
+from v2g.app import app
 
 from .utils import create_user, delete_user
 

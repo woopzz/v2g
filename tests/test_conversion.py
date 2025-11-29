@@ -7,9 +7,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 import v2g.tasks as tasks
-from v2g.config import settings
-from v2g.main import app
-from v2g.routers.conversion import create_conversion
+from v2g.app import app
+from v2g.core.config import settings
+from v2g.modules.conversions.routes import create_conversion
 
 from .utils import create_user_and_token
 
@@ -22,7 +22,8 @@ async def test_conversion(mongo_client, video_file):
     with TestClient(app) as client:
         # Should run conversion.
 
-        with patch('v2g.routers.conversion.convert_video_to_gif') as mock_convert_video_to_gif:
+        convert_video_to_gif_ = 'v2g.modules.conversions.routes.convert_video_to_gif'
+        with patch(convert_video_to_gif_) as mock_convert_video_to_gif:
             response = client.post(
                 '/conversion',
                 data={'webhook_url': webhook_url},
