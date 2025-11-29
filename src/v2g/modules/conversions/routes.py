@@ -9,9 +9,10 @@ from pydantic import HttpUrl
 from pymongo import AsyncMongoClient
 
 from v2g.core.config import settings
-from v2g.core.dependencies import CurrentUser, MongoClientDep
+from v2g.core.database import MongoClientDep
 from v2g.core.models import TypeObjectId
 from v2g.core.utils import create_error_responses
+from v2g.modules.users.dependencies import CurrentUserIDDep
 from v2g.rate_limiter import limiter
 from v2g.tasks import convert_video_to_gif
 
@@ -33,7 +34,7 @@ async def convert_video(
     webhook_url: Annotated[HttpUrl | None, Form()] = None,
     request: Request,
     mongo_client: MongoClientDep,
-    current_user: CurrentUser,
+    current_user_id: CurrentUserIDDep,
 ):
     filename = file.filename
 
@@ -45,7 +46,7 @@ async def convert_video(
         file.file,
         filename or '',
         content_type,
-        current_user.id,
+        current_user_id,
         mongo_client,
         webhook_url=webhook_url and webhook_url.unicode_string(),
     )
@@ -64,12 +65,12 @@ async def convert_video(
 async def get_conversion(
     conversion_id: TypeObjectId,
     mongo_client: MongoClientDep,
-    current_user: CurrentUser,
+    current_user_id: CurrentUserIDDep,
 ):
     db = mongo_client.get_database(settings.mongodb.dbname)
     collection = db.get_collection('conversions')
 
-    conversion = await collection.find_one({'_id': conversion_id, 'owner_id': current_user.id})
+    conversion = await collection.find_one({'_id': conversion_id, 'owner_id': current_user_id})
     if not conversion:
         raise HTTPException(status_code=404)
 
@@ -85,7 +86,11 @@ async def get_conversion(
     },
     response_class=StreamingResponse,
 )
-async def get_file(file_id: TypeObjectId, mongo_client: MongoClientDep, current_user: CurrentUser):
+async def get_file(
+    file_id: TypeObjectId,
+    mongo_client: MongoClientDep,
+    current_user_id: CurrentUserIDDep,
+):
     db = mongo_client.get_database(settings.mongodb.dbname)
     bucket = gridfs.AsyncGridFSBucket(db, 'files')
 
@@ -96,7 +101,7 @@ async def get_file(file_id: TypeObjectId, mongo_client: MongoClientDep, current_
 
     metadata = stream.metadata
 
-    if metadata['owner_id'] != current_user.id:
+    if metadata['owner_id'] != current_user_id:
         raise HTTPException(status_code=404)
 
     return StreamingResponse(stream, media_type=metadata['content_type'])

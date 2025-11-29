@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException
 
 from v2g.core.config import settings
-from v2g.core.dependencies import CurrentUser, MongoClientDep
+from v2g.core.database import MongoClientDep
 from v2g.core.security import get_password_hash
 from v2g.core.utils import create_error_responses
 
+from .dependencies import CurrentUserIDDep
 from .models import UserCreate, UserPublic
 
 router = APIRouter()
@@ -16,19 +17,19 @@ router = APIRouter()
     summary='Get info of my user',
     responses=create_error_responses({404}, add_token_related_errors=True),
 )
-async def get_my_user(current_user: CurrentUser, mongo_client: MongoClientDep):
+async def get_my_user(current_user_id: CurrentUserIDDep, mongo_client: MongoClientDep):
     db = mongo_client.get_database(settings.mongodb.dbname)
     collection_users = db.get_collection('users')
 
-    user = await collection_users.find_one({'_id': current_user.id})
+    user = await collection_users.find_one({'_id': current_user_id})
     if not user:
         raise HTTPException(status_code=404)
 
     collection_conversions = db.get_collection('conversions')
-    conversions = [x async for x in collection_conversions.find({'owner_id': current_user.id})]
+    conversions = [x async for x in collection_conversions.find({'owner_id': current_user_id})]
 
     return UserPublic(
-        _id=current_user.id,
+        _id=current_user_id,
         username=user['username'],
         conversions=conversions,
     )

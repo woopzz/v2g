@@ -1,7 +1,7 @@
 from typing import Any
 
 import bson
-from pydantic import BaseModel, Field, GetCoreSchemaHandler, GetJsonSchemaHandler
+from pydantic import BaseModel, GetCoreSchemaHandler, GetJsonSchemaHandler
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import CoreSchema, PydanticCustomError, core_schema
 
@@ -53,18 +53,3 @@ class ErrorResponse(BaseSchema):
 
     class Config:
         title = 'Error'
-
-
-class Token(BaseSchema):
-    access_token: str
-    token_type: str = 'bearer'
-
-
-class User(BaseSchema):
-    id: TypeObjectId = Field(
-        alias='_id',
-        serialization_alias='id',
-    )
-
-    class Config:
-        arbitrary_types_allowed = True

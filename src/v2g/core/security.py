@@ -1,14 +1,19 @@
 import datetime as dt
+from typing import Annotated
 
 import jwt
+from fastapi import Depends
+from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 
 from v2g.core.config import settings
-from v2g.core.models import Token
+
+JWT_ALGORITHM = 'HS256'
 
 pwd_context = CryptContext(schemes=['bcrypt'])
 
-JWT_ALGORITHM = 'HS256'
+reusable_oauth2 = OAuth2PasswordBearer(tokenUrl='/login/access-token/')
+TokenDep = Annotated[str, Depends(reusable_oauth2)]
 
 
 def create_token(sub):
@@ -20,7 +25,7 @@ def create_token(sub):
         ),
     }
     access_token = jwt.encode(claims, settings.secret, algorithm=JWT_ALGORITHM)
-    return Token(access_token=access_token)
+    return access_token
 
 
 def parse_token(token):

@@ -4,10 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 
 from v2g.core.config import settings
-from v2g.core.dependencies import MongoClientDep
-from v2g.core.models import Token
+from v2g.core.database import MongoClientDep
 from v2g.core.security import create_token, verify_password
 from v2g.core.utils import create_error_responses
+
+from .models import Token
 
 router = APIRouter()
 
@@ -33,4 +34,5 @@ async def get_access_token(
         raise HTTPException(status_code=404, detail='Not found any user with these credentials.')
 
     user_id = result['_id']
-    return create_token(str(user_id))
+    access_token = create_token(str(user_id))
+    return Token(access_token=access_token)
