@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     jwt_lifetime_in_minutes: int = 60 * 24 * 7
     conversion_process_timeout_in_seconds: int = 60 * 3
 
-    RATE_LIMIT_ENABLED: bool = True
-    RATE_LIMIT_CREATE_CONVERSIONS: str = '50/day; 10/hour'
+    rate_limit_enabled: bool = True
+    rate_limit_create_conversions: str = '50/day; 10/hour'
 
     model_config = SettingsConfigDict(
         env_prefix='v2g_',

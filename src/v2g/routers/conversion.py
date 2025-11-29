@@ -25,7 +25,7 @@ router = APIRouter()
     summary='Run new conversion',
     responses=create_error_responses({400}, add_token_related_errors=True),
 )
-@limiter.limit(settings.RATE_LIMIT_CREATE_CONVERSIONS)
+@limiter.limit(settings.rate_limit_create_conversions)
 async def convert_video(
     *,
     file: UploadFile,
