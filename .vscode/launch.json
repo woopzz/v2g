@@ -4,13 +4,13 @@
             "name": "Dev",
             "type": "debugpy",
             "request": "launch",
-            "program": "main.py",
-            "cwd": "${workspaceFolder}/v2g",
+            "program": "./src/v2g/server.py",
+            "cwd": "${workspaceFolder}",
             "console": "internalConsole",
             "justMyCode": false,
             "env": {
                 "V2G_UVICORN_RELOAD": "1",
             }
-        },
+        }
     ]
 }
