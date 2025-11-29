@@ -10,7 +10,7 @@ from pydantic import ValidationError
 from pymongo import MongoClient
 
 from v2g.core.config import settings
-from v2g.core.models import ConversionWebhookBody
+from v2g.modules.conversions.models import ConversionWebhookBody
 
 logger = get_task_logger(__name__)
 

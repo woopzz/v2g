@@ -44,64 +44,27 @@ class TypeObjectId:
         }
 
 
-class ErrorResponse(BaseModel):
+class BaseSchema(BaseModel):
+    pass
+
+
+class ErrorResponse(BaseSchema):
     detail: str
 
     class Config:
         title = 'Error'
 
 
-class Token(BaseModel):
+class Token(BaseSchema):
     access_token: str
     token_type: str = 'bearer'
 
 
-class User(BaseModel):
+class User(BaseSchema):
     id: TypeObjectId = Field(
         alias='_id',
         serialization_alias='id',
     )
-
-    class Config:
-        arbitrary_types_allowed = True
-
-
-class UserCreate(BaseModel):
-    username: str = Field(min_length=3)
-    password: str = Field(min_length=8)
-
-
-class UserPublic(BaseModel):
-    id: TypeObjectId = Field(
-        alias='_id',
-        serialization_alias='id',
-    )
-    username: str
-    conversions: list['Conversion']
-
-    class Config:
-        title = 'User'
-        arbitrary_types_allowed = True
-
-
-class Conversion(BaseModel):
-    id: TypeObjectId = Field(
-        alias='_id',
-        serialization_alias='id',
-    )
-    owner_id: TypeObjectId = Field(exclude=True)
-    video_file_id: TypeObjectId
-    gif_file_id: TypeObjectId | None
-    webhook_url: str | None
-
-    class Config:
-        arbitrary_types_allowed = True
-
-
-class ConversionWebhookBody(BaseModel):
-    id: TypeObjectId
-    video_file_id: TypeObjectId
-    gif_file_id: TypeObjectId
 
     class Config:
         arbitrary_types_allowed = True

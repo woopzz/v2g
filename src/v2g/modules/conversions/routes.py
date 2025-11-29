@@ -10,10 +10,12 @@ from pymongo import AsyncMongoClient
 
 from v2g.core.config import settings
 from v2g.core.dependencies import CurrentUser, MongoClientDep
-from v2g.core.models import Conversion, TypeObjectId
+from v2g.core.models import TypeObjectId
 from v2g.core.utils import create_error_responses
 from v2g.rate_limiter import limiter
 from v2g.tasks import convert_video_to_gif
+
+from .models import Conversion
 
 router = APIRouter()
 

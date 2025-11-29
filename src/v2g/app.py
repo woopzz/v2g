@@ -7,8 +7,8 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from v2g.core.config import settings
-from v2g.core.models import ConversionWebhookBody
 from v2g.modules.auth.routes import router as router_login
+from v2g.modules.conversions.models import ConversionWebhookBody
 from v2g.modules.conversions.routes import router as router_conversion
 from v2g.modules.users.routes import router as router_user
 from v2g.rate_limiter import limiter
