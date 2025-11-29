@@ -31,7 +31,10 @@ class Settings(BaseSettings):
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_CREATE_CONVERSIONS: str = '50/day; 10/hour'
 
-    model_config = SettingsConfigDict(env_nested_delimiter='__')
+    model_config = SettingsConfigDict(
+        env_prefix='v2g_',
+        env_nested_delimiter='_',
+    )
     uvicorn: UvicornConfig = Field(default_factory=UvicornConfig)
     mongodb: MongoDBConfig = Field(default_factory=MongoDBConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)

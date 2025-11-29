@@ -9,7 +9,7 @@
             "console": "internalConsole",
             "justMyCode": false,
             "env": {
-                "UVICORN__RELOAD": "1",
+                "V2G_UVICORN_RELOAD": "1",
             }
         },
     ]

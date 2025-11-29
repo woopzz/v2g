@@ -27,7 +27,7 @@ services:
       - mongo
       - redis
     env_file:
-      # You should provide at least "SECRET" or every process will have its own.
+      # You should provide at least "V2G_SECRET" or every process will have its own.
       # It means your token will be valid only inside of the process that created it.
       - .env
 
