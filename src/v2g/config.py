@@ -39,5 +39,8 @@ class Settings(BaseSettings):
     def get_rate_limit_dsn(self):
         return f'redis://{self.redis.host}:{self.redis.port}/1'
 
+    def get_celery_broker_dsn(self):
+        return f'redis://{self.redis.host}:{settings.redis.port}/2'
+
 
 settings = Settings()

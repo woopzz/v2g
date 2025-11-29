@@ -16,7 +16,7 @@ logger = get_task_logger(__name__)
 
 celery_app = Celery(
     main='tasks',
-    broker=f'redis://{settings.redis.host}:{settings.redis.port}/0',
+    broker=settings.get_celery_broker_dsn(),
 )
 
 mongo_client = MongoClient(
