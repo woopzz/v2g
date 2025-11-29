@@ -19,8 +19,6 @@ services:
     depends_on:
       - mongo
       - redis
-    environment:
-      - SECRET=SECRET
     tty: true
     command: /bin/bash
 
