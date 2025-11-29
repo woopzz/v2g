@@ -23,7 +23,6 @@ class RedisConfig(BaseModel):
 
 
 class Settings(BaseSettings):
-    workdir: str = '/app'
     secret: str = secrets.token_urlsafe(32)
     jwt_lifetime_in_minutes: int = 60 * 24 * 7
     conversion_process_timeout_in_seconds: int = 60 * 3

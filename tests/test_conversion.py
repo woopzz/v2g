@@ -1,5 +1,4 @@
 import io
-import os.path
 from unittest.mock import patch
 
 import bson
@@ -16,7 +15,7 @@ from .utils import create_user_and_token
 
 
 @pytest.mark.asyncio
-async def test_conversion(mongo_client):
+async def test_conversion(mongo_client, video_file):
     webhook_url = 'http://localhost:8000/'
     _, token = await create_user_and_token(mongo_client)
 
@@ -24,16 +23,14 @@ async def test_conversion(mongo_client):
         # Should run conversion.
 
         with patch('v2g.routers.conversion.convert_video_to_gif') as mock_convert_video_to_gif:
-            path_to_video = os.path.join(settings.workdir, 'tests', 'cat.mp4')
-            with open(path_to_video, 'rb') as file_input:
-                response = client.post(
-                    '/conversion',
-                    data={'webhook_url': webhook_url},
-                    files={'file': file_input},
-                    headers={'Authorization': 'Bearer ' + token.access_token},
-                )
-                assert response.status_code == 200
-                result = response.json()
+            response = client.post(
+                '/conversion',
+                data={'webhook_url': webhook_url},
+                files={'file': video_file},
+                headers={'Authorization': 'Bearer ' + token.access_token},
+            )
+            assert response.status_code == 200
+            result = response.json()
 
             conversion_id = result['id']
             video_file_id = result['video_file_id']
