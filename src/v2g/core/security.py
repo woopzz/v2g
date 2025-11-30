@@ -12,7 +12,7 @@ JWT_ALGORITHM = 'HS256'
 
 pwd_context = CryptContext(schemes=['bcrypt'])
 
-reusable_oauth2 = OAuth2PasswordBearer(tokenUrl='/login/access-token/')
+reusable_oauth2 = OAuth2PasswordBearer(tokenUrl=f'{settings.api_v1_str}/auth/access-token/')
 TokenDep = Annotated[str, Depends(reusable_oauth2)]
 
 

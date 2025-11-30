@@ -2,8 +2,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from v2g.app import app
+from v2g.core.config import settings
 
 from .utils import create_user, delete_user
+
+URL_AUTH = f'{settings.api_v1_str}/auth/'
 
 
 @pytest.mark.asyncio
@@ -14,7 +17,7 @@ async def test_should_create_token(mongo_client):
 
     with TestClient(app) as client:
         response = client.post(
-            '/login/access-token',
+            URL_AUTH + 'access-token',
             data={'username': username, 'password': password},
         )
         assert response.status_code == 200
@@ -32,7 +35,7 @@ async def test_should_get_404_if_user_does_not_exist(mongo_client):
 
     with TestClient(app) as client:
         response = client.post(
-            '/login/access-token',
+            URL_AUTH + 'access-token',
             data={'username': username, 'password': password},
         )
         assert response.status_code == 404

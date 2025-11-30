@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.openapi.utils import get_openapi
 from pymongo import AsyncMongoClient
 from slowapi import _rate_limit_exceeded_handler
@@ -12,6 +12,11 @@ from v2g.modules.conversions.models import ConversionWebhookBody
 from v2g.modules.conversions.routes import router as router_conversion
 from v2g.modules.users.routes import router as router_user
 from v2g.rate_limiter import limiter
+
+router = APIRouter()
+router.include_router(router_login, prefix='/auth', tags=['Authentication'])
+router.include_router(router_user, prefix='/users', tags=['User'])
+router.include_router(router_conversion, prefix='/conversions', tags=['Conversion'])
 
 
 @asynccontextmanager
@@ -28,9 +33,7 @@ app = FastAPI(lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-app.include_router(router_login, prefix='/login', tags=['Login'])
-app.include_router(router_user, prefix='/user', tags=['User'])
-app.include_router(router_conversion, prefix='/conversion', tags=['Conversion'])
+app.include_router(router, prefix=settings.api_v1_str)
 
 
 @app.webhooks.post(
