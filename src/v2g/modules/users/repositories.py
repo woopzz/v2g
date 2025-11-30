@@ -26,8 +26,8 @@ class UserRepository(BaseRepository):
     async def create(self, username, password):
         users_coll = self.get_users_collection()
         create_values = {
-            username: username,
-            password: get_password_hash(password),
+            'username': username,
+            'password': get_password_hash(password),
         }
         result = await users_coll.insert_one(create_values)
         return result.inserted_id
