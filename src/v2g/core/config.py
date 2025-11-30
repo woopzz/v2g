@@ -23,21 +23,27 @@ class RedisConfig(BaseModel):
 
 
 class Settings(BaseSettings):
-    workdir: str = '/app'
+    api_v1_str: str = '/api/v1'
     secret: str = secrets.token_urlsafe(32)
     jwt_lifetime_in_minutes: int = 60 * 24 * 7
     conversion_process_timeout_in_seconds: int = 60 * 3
 
-    RATE_LIMIT_ENABLED: bool = True
-    RATE_LIMIT_CREATE_CONVERSIONS: str = '50/day; 10/hour'
+    rate_limit_enabled: bool = True
+    rate_limit_create_conversions: str = '50/day; 10/hour'
 
-    model_config = SettingsConfigDict(env_nested_delimiter='__')
+    model_config = SettingsConfigDict(
+        env_prefix='v2g_',
+        env_nested_delimiter='_',
+    )
     uvicorn: UvicornConfig = Field(default_factory=UvicornConfig)
     mongodb: MongoDBConfig = Field(default_factory=MongoDBConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)
 
     def get_rate_limit_dsn(self):
         return f'redis://{self.redis.host}:{self.redis.port}/1'
+
+    def get_celery_broker_dsn(self):
+        return f'redis://{self.redis.host}:{settings.redis.port}/2'
 
 
 settings = Settings()

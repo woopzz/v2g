@@ -9,14 +9,14 @@ from celery.utils.log import get_task_logger
 from pydantic import ValidationError
 from pymongo import MongoClient
 
-from v2g.config import settings
-from v2g.models import ConversionWebhookBody
+from v2g.core.config import settings
+from v2g.modules.conversions.models import ConversionWebhookBody
 
 logger = get_task_logger(__name__)
 
 celery_app = Celery(
     main='tasks',
-    broker=f'redis://{settings.redis.host}:{settings.redis.port}/0',
+    broker=settings.get_celery_broker_dsn(),
 )
 
 mongo_client = MongoClient(
@@ -31,11 +31,22 @@ def convert_video_to_gif(self, conversion_id: str):
 
     db = mongo_client.get_database(settings.mongodb.dbname)
     collection = db.get_collection('conversions')
+
     conversion = collection.find_one({'_id': conversion_id})
+    if not conversion:
+        logger.error('Not found. Conversion ID: {conversion_id}')
+        return
+
     video_file_id = conversion['video_file_id']
 
     bucket = gridfs.GridFSBucket(db, 'files')
-    video_grid_out = next(bucket.find({'_id': video_file_id}, limit=1))
+    video_grid_out = next(bucket.find({'_id': video_file_id}, limit=1), None)
+    if not video_grid_out:
+        logger.error(
+            'Video file was not found. Conversion ID: {conversion_id}. Video ID: {video_file_id}'
+        )
+        return
+
     video_metadata = video_grid_out.metadata
 
     with tempfile.NamedTemporaryFile('wb') as file_input:
@@ -51,13 +62,14 @@ def convert_video_to_gif(self, conversion_id: str):
                 code = popen.wait(timeout=timeout)
             except TimeoutExpired:
                 logger.error(
-                    f'Exceeded the time limit of {timeout} seconds. Conversion: {conversion}'
+                    f'Exceeded the time limit of {timeout} seconds. Conversion ID: {conversion_id}'
                 )
                 raise self.retry()
 
             if code != 0:
                 logger.error(
-                    f'Could not convert a video file to a gif file. ffmpeg exit code: {code}. Conversion: {conversion}'
+                    f'Could not convert a video file to a gif file. ffmpeg exit code: {code}. '
+                    f'Conversion ID: {conversion_id}'
                 )
                 raise self.retry()
 

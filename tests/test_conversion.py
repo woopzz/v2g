@@ -1,5 +1,4 @@
 import io
-import os.path
 from unittest.mock import patch
 
 import bson
@@ -8,32 +7,41 @@ import pytest
 from fastapi.testclient import TestClient
 
 import v2g.tasks as tasks
-from v2g.config import settings
-from v2g.main import app
-from v2g.routers.conversion import create_conversion
+from v2g.app import app
+from v2g.core.config import settings
+from v2g.modules.conversions.repositories import ConversionRepository
 
 from .utils import create_user_and_token
 
+URL_CONVERSIONS = f'{settings.api_v1_str}/conversions/'
+
+
+def get_conversion_url(conversion_id):
+    return URL_CONVERSIONS + str(conversion_id)
+
+
+def get_file_url(file_id):
+    return f'{URL_CONVERSIONS}file/{file_id}'
+
 
 @pytest.mark.asyncio
-async def test_conversion(mongo_client):
+async def test_conversion(mongo_client, video_file):
     webhook_url = 'http://localhost:8000/'
     _, token = await create_user_and_token(mongo_client)
 
     with TestClient(app) as client:
         # Should run conversion.
 
-        with patch('v2g.routers.conversion.convert_video_to_gif') as mock_convert_video_to_gif:
-            path_to_video = os.path.join(settings.workdir, 'tests', 'cat.mp4')
-            with open(path_to_video, 'rb') as file_input:
-                response = client.post(
-                    '/conversion',
-                    data={'webhook_url': webhook_url},
-                    files={'file': file_input},
-                    headers={'Authorization': 'Bearer ' + token.access_token},
-                )
-                assert response.status_code == 200
-                result = response.json()
+        convert_video_to_gif_ = 'v2g.modules.conversions.routes.convert_video_to_gif'
+        with patch(convert_video_to_gif_) as mock_convert_video_to_gif:
+            response = client.post(
+                URL_CONVERSIONS,
+                data={'webhook_url': webhook_url},
+                files={'file': video_file},
+                headers={'Authorization': 'Bearer ' + token.access_token},
+            )
+            assert response.status_code == 200
+            result = response.json()
 
             conversion_id = result['id']
             video_file_id = result['video_file_id']
@@ -73,7 +81,7 @@ async def test_conversion(mongo_client):
         # Should get the video file content.
 
         response = client.get(
-            f'/conversion/file/{video_file_id}',
+            get_file_url(video_file_id),
             headers={'Authorization': 'Bearer ' + token.access_token},
         )
         assert response.status_code == 200
@@ -82,7 +90,7 @@ async def test_conversion(mongo_client):
         # Get the updated conversion info (with the gif file id).
 
         response = client.get(
-            f'/conversion/{conversion_id}',
+            get_conversion_url(conversion_id),
             headers={'Authorization': 'Bearer ' + token.access_token},
         )
         assert response.status_code == 200
@@ -96,7 +104,7 @@ async def test_conversion(mongo_client):
         # Should get the gif file content.
 
         response = client.get(
-            f'/conversion/file/{gif_file_id}',
+            get_file_url(gif_file_id),
             headers={'Authorization': 'Bearer ' + token.access_token},
         )
         assert response.status_code == 200
@@ -110,7 +118,7 @@ async def test_should_discard_conversion_if_invalid_media_type(mongo_client):
     with TestClient(app) as client:
         file_input = io.BytesIO(b'qwerty')
         response = client.post(
-            '/conversion',
+            URL_CONVERSIONS,
             files={'file': file_input},
             headers={'Authorization': 'Bearer ' + token.access_token},
         )
@@ -123,9 +131,9 @@ async def test_should_get_404_if_there_is_no_conversion(mongo_client):
     _, token = await create_user_and_token(mongo_client)
 
     with TestClient(app) as client:
-        conversation_id = bson.ObjectId()
+        conversion_id = bson.ObjectId()
         response = client.get(
-            f'/conversion/{conversation_id}',
+            get_conversion_url(conversion_id),
             headers={'Authorization': 'Bearer ' + token.access_token},
         )
         assert response.status_code == 404
@@ -137,9 +145,9 @@ async def test_should_get_404_if_there_is_no_file(mongo_client):
     _, token = await create_user_and_token(mongo_client)
 
     with TestClient(app) as client:
-        conversation_id = bson.ObjectId()
+        file_id = bson.ObjectId()
         response = client.get(
-            f'/conversion/file/{conversation_id}',
+            get_file_url(file_id),
             headers={'Authorization': 'Bearer ' + token.access_token},
         )
         assert response.status_code == 404
@@ -151,18 +159,17 @@ async def test_should_get_404_if_not_own_conversion(mongo_client):
     _, token = await create_user_and_token(mongo_client)
 
     another_user_id = bson.ObjectId()
-    conversion = await create_conversion(
+    conversion_repo = ConversionRepository(request=None, mongo_client=mongo_client)
+    conversion_id, _ = await conversion_repo.create(
         io.BytesIO(b'123'),
         '',
         'example/example',
         another_user_id,
-        mongo_client,
     )
-    conversion_id = conversion['_id']
 
     with TestClient(app) as client:
         response = client.get(
-            f'/conversion/{conversion_id}',
+            get_conversion_url(conversion_id),
             headers={'Authorization': 'Bearer ' + token.access_token},
         )
         assert response.status_code == 404
@@ -174,18 +181,17 @@ async def test_should_get_404_if_not_own_file(mongo_client):
     _, token = await create_user_and_token(mongo_client)
 
     another_user_id = bson.ObjectId()
-    conversion = await create_conversion(
+    conversion_repo = ConversionRepository(request=None, mongo_client=mongo_client)
+    _, video_file_id = await conversion_repo.create(
         io.BytesIO(b'123'),
         '',
         'example/example',
         another_user_id,
-        mongo_client,
     )
-    video_file_id = conversion['video_file_id']
 
     with TestClient(app) as client:
         response = client.get(
-            f'/conversion/file/{video_file_id}',
+            get_file_url(video_file_id),
             headers={'Authorization': 'Bearer ' + token.access_token},
         )
         assert response.status_code == 404

@@ -2,9 +2,12 @@ import bson
 import pytest
 from fastapi.testclient import TestClient
 
-from v2g.main import app
+from v2g.app import app
+from v2g.core.config import settings
 
 from .utils import create_user, create_user_and_token, delete_user
+
+URL_USERS = f'{settings.api_v1_str}/users/'
 
 
 @pytest.mark.asyncio
@@ -14,7 +17,7 @@ async def test_should_create_user(mongo_client):
     await delete_user(username, mongo_client)
 
     with TestClient(app) as client:
-        response = client.post('/user', json={'username': username, 'password': password})
+        response = client.post(URL_USERS, json={'username': username, 'password': password})
         assert response.status_code == 200
 
         result = response.json()
@@ -30,7 +33,7 @@ async def test_should_get_422_if_username_is_too_short():
     password = 'testtest'
 
     with TestClient(app) as client:
-        response = client.post('/user', json={'username': username, 'password': password})
+        response = client.post(URL_USERS, json={'username': username, 'password': password})
         assert response.status_code == 422
 
         result = response.json()
@@ -45,7 +48,7 @@ async def test_should_get_422_if_password_is_too_short():
     password = 'test'
 
     with TestClient(app) as client:
-        response = client.post('/user', json={'username': username, 'password': password})
+        response = client.post(URL_USERS, json={'username': username, 'password': password})
         assert response.status_code == 422
 
         result = response.json()
@@ -61,7 +64,7 @@ async def test_should_get_400_if_user_exists(mongo_client):
     await create_user(username, password, mongo_client)
 
     with TestClient(app) as client:
-        response = client.post('/user', json={'username': username, 'password': password})
+        response = client.post(URL_USERS, json={'username': username, 'password': password})
         assert response.status_code == 400
 
         result = response.json()
@@ -75,7 +78,9 @@ async def test_should_get_my_user_info(mongo_client):
     user_id, token = await create_user_and_token(mongo_client, username=username, password=password)
 
     with TestClient(app) as client:
-        response = client.get('/user/me', headers={'Authorization': 'Bearer ' + token.access_token})
+        response = client.get(
+            URL_USERS + 'me', headers={'Authorization': 'Bearer ' + token.access_token}
+        )
         assert response.status_code == 200
 
         result = response.json()
@@ -88,7 +93,7 @@ async def test_should_get_my_user_info(mongo_client):
 @pytest.mark.asyncio
 async def test_should_get_401_if_no_token():
     with TestClient(app) as client:
-        response = client.get('/user/me')
+        response = client.get(URL_USERS + 'me')
         assert response.status_code == 401
 
         result = response.json()

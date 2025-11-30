@@ -1,4 +1,4 @@
-from v2g.models import ErrorResponse
+from v2g.core.models import ErrorResponse
 
 _error_responses = {
     400: {

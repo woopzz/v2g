@@ -3,12 +3,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 
-from v2g.config import settings
-from v2g.models import Token
-from v2g.security import create_token, verify_password
+from v2g.core.security import create_token
+from v2g.core.utils import create_error_responses
+from v2g.modules.users.repositories import UserRepositoryDep
 
-from .dependencies import MongoClientDep
-from .utils import create_error_responses
+from .models import Token
 
 router = APIRouter()
 
@@ -21,17 +20,14 @@ router = APIRouter()
 )
 async def get_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    mongo_client: MongoClientDep,
+    user_repo: UserRepositoryDep,
 ):
     username = form_data.username
     password = form_data.password
 
-    db = mongo_client.get_database(settings.mongodb.dbname)
-    collection = db.get_collection('users')
-
-    result = await collection.find_one({'username': username})
-    if not (result and verify_password(password, result['password'])):
+    user = await user_repo.get_by_username(username)
+    if not (user and await user_repo.verify_password(user, password)):
         raise HTTPException(status_code=404, detail='Not found any user with these credentials.')
 
-    user_id = result['_id']
-    return create_token(str(user_id))
+    access_token = create_token(str(user.id))
+    return Token(access_token=access_token)
