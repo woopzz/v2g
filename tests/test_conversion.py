@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 import v2g.tasks as tasks
 from v2g.app import app
 from v2g.core.config import settings
-from v2g.modules.conversions.routes import create_conversion
+from v2g.modules.conversions.repositories import ConversionRepository
 
 from .utils import create_user_and_token
 
@@ -149,14 +149,13 @@ async def test_should_get_404_if_not_own_conversion(mongo_client):
     _, token = await create_user_and_token(mongo_client)
 
     another_user_id = bson.ObjectId()
-    conversion = await create_conversion(
+    conversion_repo = ConversionRepository(request=None, mongo_client=mongo_client)
+    conversion_id, _ = await conversion_repo.create(
         io.BytesIO(b'123'),
         '',
         'example/example',
         another_user_id,
-        mongo_client,
     )
-    conversion_id = conversion['_id']
 
     with TestClient(app) as client:
         response = client.get(
@@ -172,14 +171,13 @@ async def test_should_get_404_if_not_own_file(mongo_client):
     _, token = await create_user_and_token(mongo_client)
 
     another_user_id = bson.ObjectId()
-    conversion = await create_conversion(
+    conversion_repo = ConversionRepository(request=None, mongo_client=mongo_client)
+    _, video_file_id = await conversion_repo.create(
         io.BytesIO(b'123'),
         '',
         'example/example',
         another_user_id,
-        mongo_client,
     )
-    video_file_id = conversion['video_file_id']
 
     with TestClient(app) as client:
         response = client.get(

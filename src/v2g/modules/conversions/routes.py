@@ -1,15 +1,11 @@
-import mimetypes
-from typing import Annotated, BinaryIO
+from typing import Annotated
 
-import bson
 import gridfs
 from fastapi import APIRouter, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import HttpUrl
-from pymongo import AsyncMongoClient
 
 from v2g.core.config import settings
-from v2g.core.database import MongoClientDep
 from v2g.core.models import TypeObjectId
 from v2g.core.utils import create_error_responses
 from v2g.modules.users.dependencies import CurrentUserIDDep
@@ -17,6 +13,7 @@ from v2g.rate_limiter import limiter
 from v2g.tasks import convert_video_to_gif
 
 from .models import Conversion
+from .repositories import ConversionRepositoryDep
 
 router = APIRouter()
 
@@ -33,27 +30,31 @@ async def convert_video(
     file: UploadFile,
     webhook_url: Annotated[HttpUrl | None, Form()] = None,
     request: Request,
-    mongo_client: MongoClientDep,
     current_user_id: CurrentUserIDDep,
+    conversion_repo: ConversionRepositoryDep,
 ):
     filename = file.filename
 
-    content_type = calc_mimetype(file.content_type, filename)
+    content_type = conversion_repo.calc_mimetype(file.content_type, filename)
     if not content_type:
         raise HTTPException(status_code=400, detail='Invalid media type. Expected video/*')
 
-    conversion = await create_conversion(
+    webhook_url = webhook_url and webhook_url.unicode_string()
+    conversion_id, video_file_id = await conversion_repo.create(
         file.file,
         filename or '',
         content_type,
         current_user_id,
-        mongo_client,
-        webhook_url=webhook_url and webhook_url.unicode_string(),
+        webhook_url=webhook_url,
     )
-
-    convert_video_to_gif.delay(str(conversion['_id']))
-
-    return conversion
+    convert_video_to_gif.delay(str(conversion_id))
+    return {
+        '_id': conversion_id,
+        'owner_id': str(current_user_id),
+        'video_file_id': video_file_id,
+        'gif_file_id': None,
+        'webhook_url': webhook_url,
+    }
 
 
 @router.get(
@@ -64,13 +65,10 @@ async def convert_video(
 )
 async def get_conversion(
     conversion_id: TypeObjectId,
-    mongo_client: MongoClientDep,
     current_user_id: CurrentUserIDDep,
+    conversion_repo: ConversionRepositoryDep,
 ):
-    db = mongo_client.get_database(settings.mongodb.dbname)
-    collection = db.get_collection('conversions')
-
-    conversion = await collection.find_one({'_id': conversion_id, 'owner_id': current_user_id})
+    conversion = await conversion_repo.get(id_=conversion_id, owner_id=current_user_id)
     if not conversion:
         raise HTTPException(status_code=404)
 
@@ -88,14 +86,13 @@ async def get_conversion(
 )
 async def get_file(
     file_id: TypeObjectId,
-    mongo_client: MongoClientDep,
     current_user_id: CurrentUserIDDep,
+    conversion_repo: ConversionRepositoryDep,
 ):
-    db = mongo_client.get_database(settings.mongodb.dbname)
-    bucket = gridfs.AsyncGridFSBucket(db, 'files')
+    files_bucket = conversion_repo.get_files_bucket()
 
     try:
-        stream = await bucket.open_download_stream(file_id)
+        stream = await files_bucket.open_download_stream(file_id)
     except gridfs.NoFile:
         raise HTTPException(status_code=404)
 
@@ -105,48 +102,3 @@ async def get_file(
         raise HTTPException(status_code=404)
 
     return StreamingResponse(stream, media_type=metadata['content_type'])
-
-
-def calc_mimetype(file_mimetype, filename):
-    prefix = 'video/'
-
-    if file_mimetype and file_mimetype.startswith(prefix):
-        return file_mimetype
-
-    if filename:
-        mimetype, _ = mimetypes.guess_type(filename)
-        if mimetype and mimetype.startswith(prefix):
-            return mimetype
-
-    return None
-
-
-async def create_conversion(
-    file: BinaryIO,
-    filename: str,
-    content_type: str,
-    owner_id: bson.ObjectId,
-    mongo_client: AsyncMongoClient,
-    webhook_url: str | None = None,
-):
-    metadata = {
-        'owner_id': owner_id,
-        'content_type': content_type,
-    }
-    db = mongo_client.get_database(settings.mongodb.dbname)
-    bucket = gridfs.AsyncGridFSBucket(db, 'files')
-    mongo_video_id = await bucket.upload_from_stream(filename, file, metadata=metadata)
-
-    conversion = {
-        'owner_id': owner_id,
-        'video_file_id': mongo_video_id,
-        'gif_file_id': None,
-        'webhook_url': webhook_url,
-    }
-
-    collection = db.get_collection('conversions')
-    inserted_result = await collection.insert_one(conversion)
-    conversion_id = inserted_result.inserted_id
-
-    conversion['_id'] = conversion_id
-    return conversion

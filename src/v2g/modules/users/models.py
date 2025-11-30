@@ -9,6 +9,8 @@ class User(BaseSchema):
         alias='_id',
         serialization_alias='id',
     )
+    username: str
+    password: str
 
     class Config:
         arbitrary_types_allowed = True
