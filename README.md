@@ -2,22 +2,40 @@
 
 A web API that converts video files into GIF images.
 
-### How to use
+### An example configuration
 
-You will need Docker (and Docker Compose) to run the app.
+```yaml
+services:
 
-1. Create a .env file in the project root with at least the SECRET key. Check `./v2g/config.py` for other configurable options.
+  mongo:
+    image: mongo:8.2
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:8.4
+
+  app:
+    image: ghcr.io/woopzz/v2g:latest
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongo
+      - redis
+
+  workers:
+    image: ghcr.io/woopzz/v2g:latest
+    depends_on:
+      - mongo
+      - redis
+    command: /app/run_workers.sh
+
+volumes:
+  mongo-data:
 ```
-SECRET=YOUR_SECRET
-```
-2. Start the app:
-```bash
-docker compose up
-```
-3. Open `http://0.0.0.0:8000/docs` to view the Swagger documentation.
 
 ### Development
 
-Use the devcontainer.
+Use devcontainer.
 
-There is no separate instance for Celery workers - you need to manage them manually inside the app instance. Run the script `./scripts/run_workers.sh` to spawn the workers.
+Spawn Celery workers manually by running [./scripts/run_workers.sh](./scripts/run_workers.sh).
