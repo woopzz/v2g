@@ -22,6 +22,15 @@ services:
     tty: true
     command: /bin/bash
 
+  prometheus:
+    image: prom/prometheus:v3.8.0
+    volumes:
+      - ../prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
+
 volumes:
 
   mongo-data:
+  prometheus-data:
