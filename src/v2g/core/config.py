@@ -3,6 +3,14 @@ import secrets
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+DEFAULT_PROMETHEUS_MULTIPROC_DIR = '/tmp/prometheus_multiproc_dir'
+PATHES_TO_SKIP_METRICS_FOR = (
+    '/favicon.ico',
+    '/metrics',
+    '/docs',
+    '/openapi.json',
+)
+
 
 class UvicornConfig(BaseModel):
     host: str = '0.0.0.0'
