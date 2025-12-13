@@ -35,6 +35,8 @@ ERROR_COUNT = Counter(
 class MetricsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
+
+        # Doesn't work for paths with parameters!
         if path in PATHES_TO_SKIP_METRICS_FOR:
             return await call_next(request)
 
@@ -49,6 +51,12 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 
         request_time = time.perf_counter() - start_at
         method = request.method
+
+        # Thus 'path' contains things like '/api/v1/conversions/{conversion_id}/'.
+        # It allows to group metrics of same route.
+        route = request.scope.get('route')
+        if route:
+            path = route.path
 
         if exception:
             status = 500
