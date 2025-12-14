@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = True
     rate_limit_create_conversions: str = '50/day; 10/hour'
 
+    log_level: str = 'INFO'
+    log_json: bool = False
+
     model_config = SettingsConfigDict(
         env_prefix='v2g_',
         env_nested_delimiter='_',

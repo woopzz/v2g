@@ -12,6 +12,7 @@ dependencies = [
     "pyjwt>=2.10.1",
     "pymongo>=4.13.2",
     "slowapi>=0.1.9",
+    "structlog>=25.5.0",
 ]
 
 [build-system]

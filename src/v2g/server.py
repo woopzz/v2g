@@ -1,12 +1,13 @@
-import logging
 import os
 import shutil
 
+import structlog
 import uvicorn
 
 from v2g.core.config import DEFAULT_PROMETHEUS_MULTIPROC_DIR, settings
+from v2g.logger import configure_logging
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 
 def setup_prometheus_multiproc_dir():
@@ -37,11 +38,20 @@ def setup_prometheus_multiproc_dir():
 
 
 if __name__ == '__main__':
+    configure_logging('app')
     setup_prometheus_multiproc_dir()
+    log_config = {
+        'version': 1,
+        'disable_existing_logging': False,
+        'loggers': {
+            'uvicorn': {'level': 'INFO', 'handlers': [], 'propagate': True},
+        },
+    }
     uvicorn.run(
         app='v2g.app:app',
         host=settings.uvicorn.host,
         port=settings.uvicorn.port,
         workers=settings.uvicorn.workers,
         reload=settings.uvicorn.reload,
+        log_config=log_config,
     )
