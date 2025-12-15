@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import APIRouter, FastAPI
 from fastapi.openapi.utils import get_openapi
 from pymongo import AsyncMongoClient
@@ -36,6 +37,8 @@ app.add_route('/metrics', metrics_route, include_in_schema=False)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.add_middleware(CorrelationIdMiddleware)
 
 app.include_router(router, prefix=settings.api_v1_str)
 

@@ -5,6 +5,7 @@ import bson
 import gridfs
 import httpx
 import structlog
+from asgi_correlation_id.extensions.celery import load_correlation_ids
 from celery import Celery, signals
 from pydantic import ValidationError
 from pymongo import MongoClient
@@ -12,6 +13,8 @@ from pymongo import MongoClient
 from v2g.core.config import settings
 from v2g.logger import configure_logging
 from v2g.modules.conversions.models import ConversionWebhookBody
+
+load_correlation_ids()
 
 logger = structlog.get_logger()
 

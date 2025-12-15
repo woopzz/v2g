@@ -2,6 +2,7 @@ import logging
 from functools import partial
 
 import structlog
+from asgi_correlation_id import correlation_id
 
 from v2g.core.config import settings
 
@@ -15,10 +16,18 @@ def add_logger_name(_, __, event_dict, fallback):
     return event_dict
 
 
+def add_correlation_id(_, __, event_dict):
+    request_id = correlation_id.get()
+    if request_id:
+        event_dict['request_id'] = request_id
+    return event_dict
+
+
 def configure_logging(logger_name):
     preprocessors = [
         structlog.contextvars.merge_contextvars,
         partial(add_logger_name, fallback=logger_name),
+        add_correlation_id,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt='iso', utc=True),
     ]
