@@ -6,7 +6,7 @@ services:
       - mongo-data:/data/db
 
   redis:
-    image: redis
+    image: redis:8.4
 
   app:
     build:
@@ -23,5 +23,4 @@ services:
     command: /bin/bash
 
 volumes:
-
   mongo-data:

@@ -20,6 +20,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 FROM python:3.13-slim-bookworm
 
+# It's imporatant because we collect logs from stdout and stderr.
+ENV PYTHONUNBUFFERED=1
+
 ARG USERNAME="peon"
 ARG USER_UID=1000
 ARG USER_GID=1000

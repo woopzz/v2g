@@ -4,13 +4,16 @@ version = "0.1.0"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "asgi-correlation-id[celery]>=4.3.4",
     "celery[redis]>=5.5.3",
     "fastapi[standard]>=0.116.1",
     "passlib[bcrypt]>=1.7.4",
+    "prometheus-client>=0.23.1",
     "pydantic-settings>=2.10.1",
     "pyjwt>=2.10.1",
     "pymongo>=4.13.2",
     "slowapi>=0.1.9",
+    "structlog>=25.5.0",
 ]
 
 [build-system]

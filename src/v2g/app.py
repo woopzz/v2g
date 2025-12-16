@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import APIRouter, FastAPI
 from fastapi.openapi.utils import get_openapi
 from pymongo import AsyncMongoClient
@@ -7,6 +8,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from v2g.core.config import settings
+from v2g.middlewares.metrics import MetricsMiddleware, metrics_route
 from v2g.modules.auth.routes import router as router_login
 from v2g.modules.conversions.models import ConversionWebhookBody
 from v2g.modules.conversions.routes import router as router_conversion
@@ -30,8 +32,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.add_middleware(MetricsMiddleware)
+app.add_route('/metrics', metrics_route, include_in_schema=False)
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+app.add_middleware(CorrelationIdMiddleware)
 
 app.include_router(router, prefix=settings.api_v1_str)
 
