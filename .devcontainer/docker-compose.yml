@@ -65,8 +65,19 @@ services:
       project: "${PROJECT:-v2g}"
     command: run /etc/alloy/config.alloy
 
+  grafana:
+    image: grafana/grafana:12.3.0
+    volumes:
+      - ../grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    labels:
+      project: "${PROJECT:-v2g}"
+
 volumes:
 
   mongo-data:
   prometheus-data:
   loki-data:
+  grafana-data:
