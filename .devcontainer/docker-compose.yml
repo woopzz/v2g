@@ -4,13 +4,9 @@ services:
     image: mongo:8.2
     volumes:
       - mongo-data:/data/db
-    labels:
-      project: "${PROJECT:-v2g}"
 
   redis:
-    image: redis
-    labels:
-      project: "${PROJECT:-v2g}"
+    image: redis:8.4
 
   app:
     build:
@@ -23,61 +19,8 @@ services:
     depends_on:
       - mongo
       - redis
-    labels:
-      project: "${PROJECT:-v2g}"
     tty: true
     command: /bin/bash
 
-  prometheus:
-    image: prom/prometheus:v3.8.0
-    volumes:
-      - ../prometheus:/etc/prometheus
-      - prometheus-data:/prometheus
-    labels:
-      project: "${PROJECT:-v2g}"
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yaml'
-
-  node_exporter:
-    image: prom/node-exporter:v1.10.2
-    pid: host
-    volumes:
-      - '/:/host:ro,rslave'
-    labels:
-      project: "${PROJECT:-v2g}"
-    command:
-      - '--path.rootfs=/host'
-
-  loki:
-    image: grafana/loki:3.5.9
-    volumes:
-      - loki-data:/loki
-    labels:
-      project: "${PROJECT:-v2g}"
-
-  alloy:
-    image: grafana/alloy:v1.12.0
-    volumes:
-      - ../alloy/config.alloy:/etc/alloy/config.alloy
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-    labels:
-      project: "${PROJECT:-v2g}"
-    command: run /etc/alloy/config.alloy
-
-  grafana:
-    image: grafana/grafana:12.3.0
-    volumes:
-      - ../grafana/provisioning:/etc/grafana/provisioning
-      - grafana-data:/var/lib/grafana
-    ports:
-      - "3000:3000"
-    labels:
-      project: "${PROJECT:-v2g}"
-
 volumes:
-
   mongo-data:
-  prometheus-data:
-  loki-data:
-  grafana-data:
