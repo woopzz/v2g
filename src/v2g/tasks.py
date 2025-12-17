@@ -26,6 +26,7 @@ celery_app = Celery(
 mongo_client = MongoClient(
     host=settings.mongodb.host,
     port=settings.mongodb.port,
+    connect=False,
 )
 
 
