@@ -21,8 +21,6 @@ services:
 
   app:
     image: ghcr.io/woopzz/v2g:latest
-    ports:
-      - "8000:8000"
     depends_on:
       - mongo
       - redis
@@ -83,16 +81,25 @@ services:
     image: grafana/grafana:12.3.0
     depends_on:
       - alloy
-    ports:
-      - "3000:3000"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - grafana-data:/var/lib/grafana
     environment:
       GF_SECURITY_ADMIN_USER: "${GF_SECURITY_ADMIN_USER:-admin}"
       GF_SECURITY_ADMIN_PASSWORD: "${GF_SECURITY_ADMIN_PASSWORD:-admin}"
+      GF_SERVER_ROOT_URL: http://grafana:3000/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: true
     labels:
       project: "${PROJECT:-v2g}"
+
+  nginx:
+    image: nginx:1.29.4
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - app
 
 volumes:
   mongo-data:
