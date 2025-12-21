@@ -1,0 +1,23 @@
+name: Pull request checks
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+
+  check:
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Run containers.
+        run: docker compose -f ./tests/docker-compose.yml up -d
+
+      - name: Run lint
+        run: docker compose -f ./tests/docker-compose.yml exec app uvx ruff check /app/src /app/tests
+
+      - name: Run tests
+        run: docker compose -f ./tests/docker-compose.yml exec app uv run pytest /app/tests
