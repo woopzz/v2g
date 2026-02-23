@@ -1,18 +1,21 @@
+import json
 import tempfile
 from subprocess import DEVNULL, Popen, TimeoutExpired
 
 import bson
 import gridfs
 import httpx
+import redis
 import structlog
 from asgi_correlation_id.extensions.celery import load_correlation_ids
 from celery import Celery, signals
+from celery.exceptions import MaxRetriesExceededError
 from pydantic import ValidationError
 from pymongo import MongoClient
 
 from v2g.core.config import settings
 from v2g.logger import configure_logging
-from v2g.modules.conversions.models import ConversionWebhookBody
+from v2g.modules.conversions.models import ConversionStatus, ConversionWebhookBody
 
 load_correlation_ids()
 
@@ -27,6 +30,11 @@ mongo_client = MongoClient(
     host=settings.mongodb.host,
     port=settings.mongodb.port,
     connect=False,
+)
+
+redis_client = redis.Redis(
+    host=settings.redis.host,
+    port=settings.redis.port,
 )
 
 
@@ -45,6 +53,20 @@ def on_task_prerun(sender, task_id, task, **_):
     )
 
 
+def _set_conversion_status(collection, conversion_id, owner_id, status, extra=None):
+    fields = {'status': str(status)}
+    if extra:
+        fields.update(extra)
+
+    collection.update_one({'_id': conversion_id}, {'$set': fields})
+
+    message = {'conversion_id': str(conversion_id), 'status': str(status)}
+    if extra and 'gif_file_id' in extra:
+        message['gif_file_id'] = str(extra['gif_file_id'])
+
+    redis_client.publish(f'user:{owner_id}:events', json.dumps(message))
+
+
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=30)
 def convert_video_to_gif(self, conversion_id: str):
     log = logger.bind(conversion_id=conversion_id)
@@ -58,12 +80,16 @@ def convert_video_to_gif(self, conversion_id: str):
         log.error('Conversion was not found.')
         return
 
+    owner_id = conversion['owner_id']
+    _set_conversion_status(collection, conversion_id, owner_id, ConversionStatus.PROCESSING)
+
     video_file_id = conversion['video_file_id']
 
     bucket = gridfs.GridFSBucket(db, 'files')
     video_grid_out = next(bucket.find({'_id': video_file_id}, limit=1), None)
     if not video_grid_out:
         log.error('Video file was not found.', video_file_id=video_file_id)
+        _set_conversion_status(collection, conversion_id, owner_id, ConversionStatus.FAILED)
         return
 
     video_metadata = video_grid_out.metadata
@@ -85,15 +111,41 @@ def convert_video_to_gif(self, conversion_id: str):
                 code = popen.wait(timeout=timeout)
             except TimeoutExpired:
                 log.error('Conversion timed out.', timeout=timeout)
-                raise self.retry()
+                try:
+                    raise self.retry()
+                except MaxRetriesExceededError:
+                    log.error('Max retries exceeded after timeout.')
+                    _set_conversion_status(
+                        collection,
+                        conversion_id,
+                        owner_id,
+                        ConversionStatus.FAILED,
+                    )
+                    return
 
             if code != 0:
                 log.error('ffmpeg failed', exit_code=code)
-                raise self.retry()
+                try:
+                    raise self.retry()
+                except MaxRetriesExceededError:
+                    log.error('Max retries exceeded after ffmpeg failure.')
+                    _set_conversion_status(
+                        collection,
+                        conversion_id,
+                        owner_id,
+                        ConversionStatus.FAILED,
+                    )
+                    return
 
             metadata = {'content_type': 'image/gif', 'owner_id': video_metadata['owner_id']}
             mongo_gif_id = bucket.upload_from_stream('result.gif', file_output, metadata=metadata)
-            collection.update_one({'_id': conversion_id}, {'$set': {'gif_file_id': mongo_gif_id}})
+            _set_conversion_status(
+                collection,
+                conversion_id,
+                owner_id,
+                ConversionStatus.DONE,
+                extra={'gif_file_id': mongo_gif_id},
+            )
 
     webhook_url = conversion.get('webhook_url')
     if webhook_url:

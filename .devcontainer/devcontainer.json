@@ -10,5 +10,8 @@
                 "charliermarsh.ruff"
             ]
         }
-    }
+    },
+    "mounts": [
+        "source=${localEnv:HOME}/.claude,target=/home/peon/.claude,type=bind"
+    ]
 }

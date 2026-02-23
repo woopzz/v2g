@@ -12,7 +12,7 @@ from v2g.modules.users.dependencies import CurrentUserIDDep
 from v2g.rate_limiter import limiter
 from v2g.tasks import convert_video_to_gif
 
-from .models import Conversion
+from .models import Conversion, ConversionStatus
 from .repositories import ConversionRepositoryDep
 
 router = APIRouter()
@@ -54,6 +54,7 @@ async def convert_video(
         'video_file_id': video_file_id,
         'gif_file_id': None,
         'webhook_url': webhook_url,
+        'status': ConversionStatus.PENDING,
     }
 
 

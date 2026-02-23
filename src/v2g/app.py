@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+import redis.asyncio as aioredis
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import APIRouter, FastAPI
 from fastapi.openapi.utils import get_openapi
@@ -13,12 +14,14 @@ from v2g.modules.auth.routes import router as router_login
 from v2g.modules.conversions.models import ConversionWebhookBody
 from v2g.modules.conversions.routes import router as router_conversion
 from v2g.modules.users.routes import router as router_user
+from v2g.modules.websocket.routes import router as router_ws
 from v2g.rate_limiter import limiter
 
 router = APIRouter()
 router.include_router(router_login, prefix='/auth', tags=['Authentication'])
 router.include_router(router_user, prefix='/users', tags=['User'])
 router.include_router(router_conversion, prefix='/conversions', tags=['Conversion'])
+router.include_router(router_ws, tags=['WebSocket'])
 
 
 @asynccontextmanager
@@ -27,7 +30,11 @@ async def lifespan(app: FastAPI):
         host=settings.mongodb.host,
         port=settings.mongodb.port,
     ) as mongo_client:
-        yield {'mongo_client': mongo_client}
+        async with aioredis.Redis(
+            host=settings.redis.host,
+            port=settings.redis.port,
+        ) as redis_client:
+            yield {'mongo_client': mongo_client, 'redis_client': redis_client}
 
 
 app = FastAPI(lifespan=lifespan)

@@ -7,7 +7,7 @@ from fastapi import Depends, Request
 from v2g.core.database import MongoClientDep
 from v2g.core.repository import BaseRepository
 
-from .models import Conversion
+from .models import Conversion, ConversionStatus
 
 
 class ConversionRepository(BaseRepository):
@@ -46,6 +46,7 @@ class ConversionRepository(BaseRepository):
             'video_file_id': video_file_id,
             'gif_file_id': None,
             'webhook_url': webhook_url,
+            'status': ConversionStatus.PENDING,
         }
 
         conversions_coll = self.get_conversions_collection()
