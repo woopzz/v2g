@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+import redis
 from pymongo import AsyncMongoClient
 
 from v2g.core.config import settings
@@ -11,6 +12,14 @@ def mongo_client():
     return AsyncMongoClient(
         host=settings.mongodb.host,
         port=settings.mongodb.port,
+    )
+
+
+@pytest.fixture
+def redis_client():
+    return redis.Redis(
+        host=settings.redis.host,
+        port=settings.redis.port,
     )
 
 

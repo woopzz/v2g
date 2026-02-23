@@ -50,6 +50,7 @@ async def test_conversion(mongo_client, video_file):
             assert conversion_id and bson.ObjectId(conversion_id)
             assert video_file_id and bson.ObjectId(video_file_id)
             assert gif_file_id is None
+            assert result['status'] == 'pending'
 
         mock_convert_video_to_gif.delay.assert_called_once_with(conversion_id)
 
@@ -100,6 +101,7 @@ async def test_conversion(mongo_client, video_file):
         assert result['video_file_id'] == video_file_id
         assert result['gif_file_id'] == gif_file_id
         assert result['webhook_url'] == webhook_url
+        assert result['status'] == 'done'
 
         # Should get the gif file content.
 
