@@ -1,5 +1,5 @@
 *.pyc
 .env
 
-terraform/.terraform
-terraform/v2g.pub
+terraform/**/.terraform
+terraform/**/*.pub

@@ -8,6 +8,15 @@ services:
   redis:
     image: redis:8.4
 
+  localstack:
+    image: localstack/localstack:community-archive
+    ports:
+      - "4566:4566"
+    environment:
+      - DEFAULT_REGION=eu-central-1
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
   app:
     build:
       context: ..
@@ -19,6 +28,12 @@ services:
     depends_on:
       - mongo
       - redis
+      - localstack
+    environment:
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      LOCALSTACK_HOSTNAME: localstack
     tty: true
     command: /bin/bash
 
