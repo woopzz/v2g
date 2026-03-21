@@ -2,4 +2,5 @@
 .env
 
 terraform/**/.terraform
+terraform/**/**.tfstate**
 terraform/**/*.pub

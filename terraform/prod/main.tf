@@ -14,6 +14,28 @@ data "aws_ami" "ubuntu" {
   owners = ["099720109477"] # Canonical
 }
 
+resource "aws_iam_role" "app" {
+  name = "v2g-app-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+    }]
+  })
+
+  tags = {
+    Name = "v2g-app-role"
+  }
+}
+
+resource "aws_iam_instance_profile" "app" {
+  name = "v2g-app-profile"
+  role = aws_iam_role.app.name
+}
+
 resource "aws_vpc" "main" {
   cidr_block         = "10.0.0.0/16"
   enable_dns_support = true
@@ -98,10 +120,41 @@ resource "aws_key_pair" "common" {
   public_key = file("./v2g.pub")
 }
 
+resource "aws_sqs_queue" "celery" {
+  name                       = "celery"
+  visibility_timeout_seconds = 3600
+  message_retention_seconds  = 86400
+
+  tags = {
+    Name = "v2g-celery"
+  }
+}
+
+resource "aws_iam_role_policy" "sqs_access" {
+  name = "v2g-sqs-access"
+  role = aws_iam_role.app.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "sqs:SendMessage",
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes",
+        "sqs:GetQueueUrl",
+      ]
+      Resource = aws_sqs_queue.celery.arn
+    }]
+  })
+}
+
 resource "aws_instance" "app" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = "t2.micro"
-  key_name      = aws_key_pair.common.key_name
+  ami                  = data.aws_ami.ubuntu.id
+  instance_type        = "t2.micro"
+  key_name             = aws_key_pair.common.key_name
+  iam_instance_profile = aws_iam_instance_profile.app.name
 
   subnet_id = aws_subnet.public.id
   vpc_security_group_ids = [

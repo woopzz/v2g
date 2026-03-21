@@ -25,6 +25,7 @@ celery_app = Celery(
     main='v2g_celery',
     broker=settings.get_celery_broker_dsn(),
 )
+celery_app.conf.broker_transport_options = settings.get_celery_broker_transport_options()
 
 mongo_client = MongoClient(
     host=settings.mongodb.host,

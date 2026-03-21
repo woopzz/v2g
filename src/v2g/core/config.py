@@ -30,6 +30,10 @@ class RedisConfig(BaseModel):
     port: int = 6379
 
 
+class SQSConfig(BaseModel):
+    region: str = 'eu-central-1'
+
+
 class Settings(BaseSettings):
     api_v1_str: str = '/api/v1'
     secret: str = secrets.token_urlsafe(32)
@@ -49,12 +53,18 @@ class Settings(BaseSettings):
     uvicorn: UvicornConfig = Field(default_factory=UvicornConfig)
     mongodb: MongoDBConfig = Field(default_factory=MongoDBConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)
+    sqs: SQSConfig = Field(default_factory=SQSConfig)
 
     def get_rate_limit_dsn(self):
         return f'redis://{self.redis.host}:{self.redis.port}/1'
 
     def get_celery_broker_dsn(self):
-        return f'redis://{self.redis.host}:{settings.redis.port}/2'
+        return 'sqs://'
+
+    def get_celery_broker_transport_options(self):
+        return {
+            'region': self.sqs.region,
+        }
 
 
 settings = Settings()
