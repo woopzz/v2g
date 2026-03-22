@@ -9,7 +9,8 @@ This project provides a backend service that takes video files (e.g., MP4, MOV) 
 - 🎥 Accepts common video formats and produces GIF output.
 - 🐳 Docker-ready and easy to deploy.
 - 📦 Includes infrastructure support (Terraform, Docker Compose).
-- 🔁 Background task processing with Celery.
+- 🔁 Background task processing with Celery and SQS.
+- 🔔 Real-time WebSocket notifications for conversion status updates.
 - 📊 Monitoring with Grafana, Alloy and Prometheus.
 - 📁 Integrated tests.
 
@@ -19,11 +20,12 @@ This project combines:
 
 - **FastAPI** – for the HTTP API server
 - **Celery** – for asynchronous video conversion tasks
-- **Redis** – as the Celery broker
+- **AWS SQS** – as the Celery broker (LocalStack used locally)
+- **Redis** – for rate limiting and WebSocket pub/sub
 - **MongoDB** – for storing files, metadata and job status
 - **Docker and Docker Compose** – for local development and deployment
 - **Terraform** – for infrastructure provisioning
-- **Grafana, Allow and Prometheus** – for observability
+- **Grafana, Alloy and Prometheus** – for observability
 
 ## 📦 Getting Started
 
