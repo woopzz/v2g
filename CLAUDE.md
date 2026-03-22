@@ -41,15 +41,17 @@ Ruff config (`.ruff.toml`): 100 char line length, single quotes.
 
 1. **Auth**: JWT (HS256) via `POST /api/v1/auth/access-token/`. Tokens last 7 days.
 2. **Upload**: `POST /api/v1/conversions/` accepts multipart video + optional `webhook_url`. File stored in MongoDB GridFS. Rate-limited per user (50/day, 10/hour) via Redis.
-3. **Convert**: A Celery task (`tasks.py`) runs FFmpeg asynchronously. On completion, the GIF is uploaded to GridFS and the conversion record updated.
-4. **Webhook**: If `webhook_url` was provided, a second Celery task POSTs conversion metadata with exponential backoff (max 8 retries).
-5. **Retrieve**: `GET /api/v1/conversions/file/{file_id}/` — validates ownership, then streams the file from GridFS.
+3. **Convert**: A Celery task (`tasks.py`) runs FFmpeg asynchronously. Status updates (`processing`/`done`/`failed`) are published to a Redis pub/sub channel. On completion, the GIF is uploaded to GridFS and the conversion record updated.
+4. **WebSocket**: `GET /api/v1/ws/` — authenticated clients subscribe to their per-user Redis channel and receive real-time conversion status events.
+5. **Webhook**: If `webhook_url` was provided, a second Celery task POSTs conversion metadata with exponential backoff (max 8 retries).
+6. **Retrieve**: `GET /api/v1/conversions/file/{file_id}/` — validates ownership, then streams the file from GridFS.
 
 ### Key Infrastructure
 
 - **FastAPI** app factory in `src/v2g/app.py`; Uvicorn entry point in `server.py`
 - **MongoDB** (Motor async client) for users, conversions, and file storage (GridFS)
-- **Redis** — two DBs: DB 1 for Celery broker, DB 2 for rate limiting
+- **AWS SQS** — Celery broker; **LocalStack** provides SQS locally (devcontainer env vars point to `http://localstack:4566`)
+- **Redis** — DB 1 for rate limiting; async client for WebSocket pub/sub
 - **Celery** workers run the FFmpeg conversion (synchronous subprocess, 180s timeout)
 - **Nginx** at port 80 reverse-proxies to the app and Grafana
 
@@ -60,7 +62,7 @@ src/v2g/
 ├── app.py, server.py          # App factory and entry point
 ├── tasks.py                   # Celery task definitions
 ├── core/                      # Shared infrastructure (config, DB, security, repository base)
-└── modules/                   # Feature modules: auth/, users/, conversions/
+└── modules/                   # Feature modules: auth/, users/, conversions/, websocket/
     └── <module>/
         ├── routes.py          # FastAPI route handlers
         ├── models.py          # Pydantic schemas
@@ -68,7 +70,7 @@ src/v2g/
         └── dependencies.py    # Dependency injection helpers
 ```
 
-Each module follows: **routes → repositories → MongoDB**. Repositories extend `core/repository.py:BaseRepository`.
+Each module follows: **routes → repositories → MongoDB**. Repositories extend `core/repository.py:BaseRepository`. The `websocket/` module is an exception — it has only `routes.py` and uses Redis pub/sub rather than MongoDB.
 
 ### Configuration
 
@@ -79,6 +81,7 @@ All settings use the `V2G_` prefix (defined in `core/config.py`). Key settings:
 | `V2G_SECRET` | (required) | JWT signing secret |
 | `V2G_MONGODB_HOST` | `mongo` | MongoDB host |
 | `V2G_REDIS_HOST` | `redis` | Redis host |
+| `V2G_SQS_REGION` | `eu-central-1` | AWS SQS region for Celery broker |
 | `V2G_CONVERSION_PROCESS_TIMEOUT_IN_SECONDS` | `180` | FFmpeg timeout |
 | `V2G_LOG_JSON` | `false` | Enable JSON structured logs |
 | `V2G_RATE_LIMIT_ENABLED` | `true` | Toggle rate limiting |
