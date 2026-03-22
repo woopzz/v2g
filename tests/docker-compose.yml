@@ -35,12 +35,6 @@ services:
       dockerfile: ./tests/Dockerfile
     ports:
       - "8000:8000"
-    volumes:
-      - ../src:/app/src
-      - .:/app/tests
-      - ../.pytest.ini:/app/.pytest.ini
-      - ../.ruff.toml:/app/.ruff.toml
-      - ../terraform/local:/app/terraform
     depends_on:
       - mongo
       - redis
