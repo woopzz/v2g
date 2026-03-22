@@ -14,8 +14,6 @@ services:
       - "4566:4566"
     environment:
       - DEFAULT_REGION=eu-central-1
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
 
   app:
     build:
@@ -34,6 +32,7 @@ services:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       LOCALSTACK_HOSTNAME: localstack
+      S3_HOSTNAME: localstack
     tty: true
     command: /bin/bash
 

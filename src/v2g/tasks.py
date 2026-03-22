@@ -2,12 +2,13 @@ import json
 import tempfile
 from subprocess import DEVNULL, Popen, TimeoutExpired
 
+import boto3
 import bson
-import gridfs
 import httpx
 import redis
 import structlog
 from asgi_correlation_id.extensions.celery import load_correlation_ids
+from botocore.exceptions import ClientError
 from celery import Celery, signals
 from celery.exceptions import MaxRetriesExceededError
 from pydantic import ValidationError
@@ -37,6 +38,8 @@ redis_client = redis.Redis(
     host=settings.redis.host,
     port=settings.redis.port,
 )
+
+s3_client = boto3.client('s3')
 
 
 @signals.after_setup_logger.connect
@@ -86,17 +89,16 @@ def convert_video_to_gif(self, conversion_id: str):
 
     video_file_id = conversion['video_file_id']
 
-    bucket = gridfs.GridFSBucket(db, 'files')
-    video_grid_out = next(bucket.find({'_id': video_file_id}, limit=1), None)
-    if not video_grid_out:
-        log.error('Video file was not found.', video_file_id=video_file_id)
+    try:
+        video_object = s3_client.get_object(Bucket=settings.s3.bucket, Key=str(video_file_id))
+    except ClientError:
+        log.error('Could not obtain a video file from the S3 bucket.', video_file_id=video_file_id)
         _set_conversion_status(collection, conversion_id, owner_id, ConversionStatus.FAILED)
         return
 
-    video_metadata = video_grid_out.metadata
-
     with tempfile.NamedTemporaryFile('wb') as file_input:
-        bucket.download_to_stream(video_file_id, file_input)
+        file_input.write(video_object['Body'].read())
+        file_input.flush()
 
         # We have to specify the .gif suffix so ffmpeg understands the format of the output file.
         with tempfile.NamedTemporaryFile('rb', suffix='.gif') as file_output:
@@ -138,14 +140,26 @@ def convert_video_to_gif(self, conversion_id: str):
                     )
                     return
 
-            metadata = {'content_type': 'image/gif', 'owner_id': video_metadata['owner_id']}
-            mongo_gif_id = bucket.upload_from_stream('result.gif', file_output, metadata=metadata)
+            gif_file_id = bson.ObjectId()
+            gif_s3_key = str(gif_file_id)
+            s3_client.put_object(
+                Bucket=settings.s3.bucket,
+                Key=gif_s3_key,
+                Body=file_output,
+                ContentType='image/gif',
+                Metadata={'owner-id': str(owner_id)},
+            )
+            gif_url = s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': settings.s3.bucket, 'Key': gif_s3_key},
+                ExpiresIn=settings.s3.presigned_url_expiry,
+            )
             _set_conversion_status(
                 collection,
                 conversion_id,
                 owner_id,
                 ConversionStatus.DONE,
-                extra={'gif_file_id': mongo_gif_id},
+                extra={'gif_file_id': gif_file_id, 'gif_url': gif_url},
             )
 
     webhook_url = conversion.get('webhook_url')

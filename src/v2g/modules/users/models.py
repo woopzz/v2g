@@ -1,7 +1,7 @@
 from pydantic import Field
 
 from v2g.core.models import BaseSchema, TypeObjectId
-from v2g.modules.conversions.models import Conversion
+from v2g.modules.conversions.models import ConversionPublic
 
 
 class User(BaseSchema):
@@ -27,7 +27,7 @@ class UserPublic(BaseSchema):
         serialization_alias='id',
     )
     username: str
-    conversions: list[Conversion]
+    conversions: list[ConversionPublic]
 
     class Config:
         title = 'User'

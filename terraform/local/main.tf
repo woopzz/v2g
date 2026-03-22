@@ -17,6 +17,10 @@ resource "aws_sqs_queue" "celery" {
   name = "celery"
 }
 
+resource "aws_s3_bucket" "files" {
+  bucket = "v2g"
+}
+
 output "celery_queue_url" {
   value = aws_sqs_queue.celery.url
 }

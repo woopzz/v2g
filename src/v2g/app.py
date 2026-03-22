@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+import aioboto3
 import redis.asyncio as aioredis
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import APIRouter, FastAPI
@@ -26,15 +27,25 @@ router.include_router(router_ws, tags=['WebSocket'])
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with AsyncMongoClient(
+    boto_session = aioboto3.Session()
+    mongo_client_ = AsyncMongoClient(
         host=settings.mongodb.host,
         port=settings.mongodb.port,
-    ) as mongo_client:
-        async with aioredis.Redis(
-            host=settings.redis.host,
-            port=settings.redis.port,
-        ) as redis_client:
-            yield {'mongo_client': mongo_client, 'redis_client': redis_client}
+    )
+    redis_client_ = aioredis.Redis(
+        host=settings.redis.host,
+        port=settings.redis.port,
+    )
+    async with (
+        mongo_client_ as mongo_client,
+        redis_client_ as redis_client,
+        boto_session.client('s3') as s3_client,
+    ):
+        yield {
+            'mongo_client': mongo_client,
+            'redis_client': redis_client,
+            's3_client': s3_client,
+        }
 
 
 app = FastAPI(lifespan=lifespan)
