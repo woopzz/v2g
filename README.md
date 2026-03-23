@@ -21,8 +21,9 @@ This project combines:
 - **FastAPI** – for the HTTP API server
 - **Celery** – for asynchronous video conversion tasks
 - **AWS SQS** – as the Celery broker (LocalStack used locally)
+- **AWS S3** – for storing video and GIF files (LocalStack used locally)
 - **Redis** – for rate limiting and WebSocket pub/sub
-- **MongoDB** – for storing files, metadata and job status
+- **MongoDB** – for storing conversion metadata and job status
 - **Docker and Docker Compose** – for local development and deployment
 - **Terraform** – for infrastructure provisioning
 - **Grafana, Alloy and Prometheus** – for observability

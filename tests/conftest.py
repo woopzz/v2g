@@ -1,10 +1,19 @@
 from pathlib import Path
 
+import aioboto3
 import pytest
+import pytest_asyncio
 import redis
 from pymongo import AsyncMongoClient
 
 from v2g.core.config import settings
+
+
+@pytest_asyncio.fixture
+async def s3_client():
+    session = aioboto3.Session()
+    async with session.client('s3') as client:
+        yield client
 
 
 @pytest.fixture

@@ -150,6 +150,32 @@ resource "aws_iam_role_policy" "sqs_access" {
   })
 }
 
+resource "aws_s3_bucket" "files" {
+  bucket = "v2g"
+
+  tags = {
+    Name = "v2g-files"
+  }
+}
+
+resource "aws_iam_role_policy" "s3_access" {
+  name = "v2g-s3-access"
+  role = aws_iam_role.app.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject",
+      ]
+      Resource = "${aws_s3_bucket.files.arn}/*"
+    }]
+  })
+}
+
 resource "aws_instance" "app" {
   ami                  = data.aws_ami.ubuntu.id
   instance_type        = "t2.micro"

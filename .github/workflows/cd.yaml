@@ -15,7 +15,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run containers.
-        run: docker compose -f ./tests/docker-compose.yml up -d
+        run: docker compose -f ./tests/docker-compose.yml up -d mongo redis localstack app
+
+      - name: Set up infrastructure
+        run: docker compose -f ./tests/docker-compose.yml exec app /bin/bash -c "cd ./terraform/local && uv run tflocal init && uv run tflocal apply -auto-approve"
+
+      - name: Run workers.
+        run: docker compose -f ./tests/docker-compose.yml up -d workers
 
       - name: Run lint
         run: docker compose -f ./tests/docker-compose.yml exec app uvx ruff check /app/src /app/tests

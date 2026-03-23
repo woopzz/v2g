@@ -6,6 +6,13 @@ services:
   redis:
     image: redis:8.4
 
+  localstack:
+    image: localstack/localstack:community-archive
+    ports:
+      - "4566:4566"
+    environment:
+      - DEFAULT_REGION=eu-central-1
+
   workers:
     build:
       context: ..
@@ -13,6 +20,13 @@ services:
     depends_on:
       - mongo
       - redis
+      - localstack
+    environment:
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      LOCALSTACK_HOSTNAME: localstack
+      S3_HOSTNAME: localstack
     command: /app/scripts/run_workers.sh
 
   app:
@@ -21,13 +35,15 @@ services:
       dockerfile: ./tests/Dockerfile
     ports:
       - "8000:8000"
-    volumes:
-      - ../src:/app/src
-      - .:/app/tests
-      - ../.pytest.ini:/app/.pytest.ini
-      - ../.ruff.toml:/app/.ruff.toml
     depends_on:
       - mongo
       - redis
+      - localstack
+    environment:
+      AWS_ENDPOINT_URL: http://localstack:4566
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      LOCALSTACK_HOSTNAME: localstack
+      S3_HOSTNAME: localstack
     tty: true
     command: /bin/bash
