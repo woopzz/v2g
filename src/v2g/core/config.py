@@ -34,6 +34,11 @@ class SQSConfig(BaseModel):
     region: str = 'eu-central-1'
 
 
+class S3Config(BaseModel):
+    bucket: str = 'v2g'
+    presigned_url_expiry: int = 60 * 60 * 24 * 7
+
+
 class Settings(BaseSettings):
     api_v1_str: str = '/api/v1'
     secret: str = secrets.token_urlsafe(32)
@@ -54,6 +59,7 @@ class Settings(BaseSettings):
     mongodb: MongoDBConfig = Field(default_factory=MongoDBConfig)
     redis: RedisConfig = Field(default_factory=RedisConfig)
     sqs: SQSConfig = Field(default_factory=SQSConfig)
+    s3: S3Config = Field(default_factory=S3Config)
 
     def get_rate_limit_dsn(self):
         return f'redis://{self.redis.host}:{self.redis.port}/1'

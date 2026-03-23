@@ -22,7 +22,7 @@ pytest ./tests/test_conversion.py                     # Run a single test file
 pytest ./tests/test_conversion.py::test_name          # Run a single test
 ```
 
-Tests use a real MongoDB instance. The test docker-compose at `tests/docker-compose.yml` provides the required services when running outside the devcontainer.
+Tests use real MongoDB and LocalStack (S3/SQS) instances. The test docker-compose at `tests/docker-compose.yml` provides the required services when running outside the devcontainer.
 
 ### Linting
 
@@ -40,17 +40,18 @@ Ruff config (`.ruff.toml`): 100 char line length, single quotes.
 ### Request Flow
 
 1. **Auth**: JWT (HS256) via `POST /api/v1/auth/access-token/`. Tokens last 7 days.
-2. **Upload**: `POST /api/v1/conversions/` accepts multipart video + optional `webhook_url`. File stored in MongoDB GridFS. Rate-limited per user (50/day, 10/hour) via Redis.
-3. **Convert**: A Celery task (`tasks.py`) runs FFmpeg asynchronously. Status updates (`processing`/`done`/`failed`) are published to a Redis pub/sub channel. On completion, the GIF is uploaded to GridFS and the conversion record updated.
+2. **Upload**: `POST /api/v1/conversions/` accepts multipart video + optional `webhook_url`. File stored in S3. Rate-limited per user (50/day, 10/hour) via Redis.
+3. **Convert**: A Celery task (`tasks.py`) runs FFmpeg asynchronously. Status updates (`processing`/`done`/`failed`) are published to a Redis pub/sub channel. On completion, the GIF is uploaded to S3 and the conversion record updated with a presigned URL.
 4. **WebSocket**: `GET /api/v1/ws/` — authenticated clients subscribe to their per-user Redis channel and receive real-time conversion status events.
 5. **Webhook**: If `webhook_url` was provided, a second Celery task POSTs conversion metadata with exponential backoff (max 8 retries).
-6. **Retrieve**: `GET /api/v1/conversions/file/{file_id}/` — validates ownership, then streams the file from GridFS.
+6. **Retrieve**: The conversion response includes a `gif_url` presigned S3 URL (valid 7 days) once the GIF is ready.
 
 ### Key Infrastructure
 
 - **FastAPI** app factory in `src/v2g/app.py`; Uvicorn entry point in `server.py`
-- **MongoDB** (Motor async client) for users, conversions, and file storage (GridFS)
-- **AWS SQS** — Celery broker; **LocalStack** provides SQS locally (devcontainer env vars point to `http://localstack:4566`)
+- **MongoDB** (Motor async client) for users and conversion metadata
+- **AWS S3** — stores uploaded video files and output GIFs; files are accessed via presigned URLs (expiry 7 days)
+- **AWS SQS** — Celery broker; **LocalStack** provides SQS and S3 locally (devcontainer env vars point to `http://localstack:4566`)
 - **Redis** — DB 1 for rate limiting; async client for WebSocket pub/sub
 - **Celery** workers run the FFmpeg conversion (synchronous subprocess, 180s timeout)
 - **Nginx** at port 80 reverse-proxies to the app and Grafana
@@ -82,6 +83,8 @@ All settings use the `V2G_` prefix (defined in `core/config.py`). Key settings:
 | `V2G_MONGODB_HOST` | `mongo` | MongoDB host |
 | `V2G_REDIS_HOST` | `redis` | Redis host |
 | `V2G_SQS_REGION` | `eu-central-1` | AWS SQS region for Celery broker |
+| `V2G_S3_BUCKET` | `v2g` | S3 bucket name for video/GIF storage |
+| `V2G_S3_PRESIGNED_URL_EXPIRY` | `604800` (7 days) | Presigned URL validity in seconds |
 | `V2G_CONVERSION_PROCESS_TIMEOUT_IN_SECONDS` | `180` | FFmpeg timeout |
 | `V2G_LOG_JSON` | `false` | Enable JSON structured logs |
 | `V2G_RATE_LIMIT_ENABLED` | `true` | Toggle rate limiting |

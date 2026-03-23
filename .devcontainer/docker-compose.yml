@@ -34,6 +34,7 @@ services:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       LOCALSTACK_HOSTNAME: localstack
+      S3_HOSTNAME: localstack
     tty: true
     command: /bin/bash
 

@@ -16,6 +16,9 @@ jobs:
       - name: Run containers.
         run: docker compose -f ./tests/docker-compose.yml up -d
 
+      - name: Set up infrastructure
+        run: docker compose -f ./tests/docker-compose.yml exec app /bin/bash -c "cd ./terraform/local && uv run tflocal init && uv run tflocal apply -auto-approve"
+
       - name: Run lint
         run: docker compose -f ./tests/docker-compose.yml exec app uvx ruff check /app/src /app/tests
 
